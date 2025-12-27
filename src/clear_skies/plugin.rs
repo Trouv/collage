@@ -12,11 +12,11 @@ pub struct ClearSkiesPlugin;
 impl Plugin for ClearSkiesPlugin {
     fn build(&self, app: &mut App) {
         app.add_sub_state::<ClearSkiesState>()
-            //.add_loading_state(
-            //LoadingState::new(ClearSkiesState::Loading)
-            //.continue_to_state(ClearSkiesState::PaintSkies)
-            //.load_collection::<ClearSkiesAssetCollection>(),
-            //)
+            .add_loading_state(
+                LoadingState::new(ClearSkiesState::Loading)
+                    .continue_to_state(ClearSkiesState::PaintSkies)
+                    .load_collection::<ClearSkiesAssetCollection>(),
+            )
             .add_systems(OnEnter(ClearSkiesState::PaintSkies), setup.pipe(affect));
     }
 }

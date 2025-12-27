@@ -1816,6 +1816,7 @@ dependencies = [
  "bevy_asset_loader",
  "bevy_pipe_affect",
  "leafwing-input-manager",
+ "thiserror 2.0.17",
 ]
 
 [[package]]
