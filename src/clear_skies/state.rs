@@ -6,8 +6,10 @@ use crate::state::GameState;
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, Hash, SubStates)]
 #[source(GameState = GameState::ClearSkies)]
 pub enum ClearSkiesState {
-    /// The skybox is being drawn by the camera.
+    /// Loading state...
+    Loading,
     #[default]
+    /// The skybox is being drawn by the camera.
     PaintSkies,
     /// The skybox is being played.
     PlaySkies,
