@@ -1,6 +1,10 @@
 use bevy::asset::AssetMetaCheck;
 use bevy::prelude::*;
 
+mod state;
+
+mod clear_skies;
+
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(AssetPlugin {
@@ -10,14 +14,6 @@ fn main() {
             meta_check: AssetMetaCheck::Never,
             ..default()
         }))
-        .add_systems(Startup, setup)
+        .init_state::<state::GameState>()
         .run();
-}
-
-fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
-    commands.spawn(Camera2d);
-    commands.spawn(Sprite {
-        image: asset_server.load("ducky.png"),
-        ..Default::default()
-    });
 }
