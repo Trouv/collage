@@ -11,6 +11,4 @@ pub enum ClearSkiesState {
     Loading,
     /// The skybox is being drawn by the camera.
     PaintSkies,
-    /// The skybox is being played.
-    PlaySkies,
 }

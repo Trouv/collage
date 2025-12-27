@@ -5,3 +5,5 @@ mod state;
 pub use state::ClearSkiesState;
 
 mod transition;
+
+mod paint;

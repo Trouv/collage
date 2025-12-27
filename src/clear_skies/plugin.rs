@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
 use bevy_pipe_affect::prelude::*;
 
+use crate::clear_skies::paint::PaintSkiesPlugin;
 use crate::clear_skies::state::ClearSkiesState;
 use crate::clear_skies::transition::{ClearSkiesAssetCollection, setup};
 
@@ -11,7 +12,8 @@ pub struct ClearSkiesPlugin;
 
 impl Plugin for ClearSkiesPlugin {
     fn build(&self, app: &mut App) {
-        app.add_sub_state::<ClearSkiesState>()
+        app.add_plugins(PaintSkiesPlugin)
+            .add_sub_state::<ClearSkiesState>()
             .add_loading_state(
                 LoadingState::new(ClearSkiesState::Loading)
                     .continue_to_state(ClearSkiesState::PaintSkies)
