@@ -11,56 +11,11 @@ use bevy_pipe_affect::prelude::*;
 use leafwing_input_manager::prelude::*;
 use thiserror::Error;
 
-use crate::clear_skies::ClearSkiesState;
-
-#[derive(Debug, Default, Copy, Clone, PartialEq, Eq, Hash, Reflect)]
-pub struct PaintSkiesPlugin;
-
-impl Plugin for PaintSkiesPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_plugins(InputManagerPlugin::<PaintSkiesAction>::default())
-            .init_resource::<PaintSkiesSettings>()
-            .add_systems(
-                OnEnter(ClearSkiesState::PaintSkies),
-                spawn_player.pipe(affect),
-            )
-            .add_systems(
-                FixedUpdate,
-                (
-                    switch_gamepads.pipe(affect),
-                    rotate_spherical_coords.pipe(affect),
-                    look_at_spherical_coords.pipe(affect),
-                )
-                    .run_if(in_state(ClearSkiesState::PaintSkies)),
-            );
-    }
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Reflect, Resource)]
-pub struct PaintSkiesSettings {
-    rotate_sensitivity: f32,
-}
-
-impl Default for PaintSkiesSettings {
-    fn default() -> Self {
-        PaintSkiesSettings {
-            rotate_sensitivity: 0.05,
-        }
-    }
-}
-
-#[derive(Debug, Default, Copy, Clone, PartialEq, Reflect, Component)]
-pub struct SphericalCoordsBounds {
-    max_phi: f32,
-    min_phi: f32,
-}
-
-#[derive(Debug, Default, Copy, Clone, PartialEq, Reflect, Component)]
-#[require(SphericalCoordsBounds, Transform)]
-pub struct LookAtSphericalCoords {
-    theta: f32,
-    phi: f32,
-}
+use crate::clear_skies::paint_skies::settings::PaintSkiesSettings;
+use crate::clear_skies::paint_skies::spherical_coords::{
+    LookAtSphericalCoords,
+    SphericalCoordsBounds,
+};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Reflect, Actionlike)]
 pub enum PaintSkiesAction {
@@ -140,20 +95,6 @@ pub fn rotate_spherical_coords(settings: Res<PaintSkiesSettings>) -> impl Effect
             let theta = (spherical_coords.theta - (rotate_by.x * rotate_sensitivity)) % (2.0 * PI);
 
             (LookAtSphericalCoords { phi, theta },)
-        },
-    )
-}
-
-pub fn look_at_spherical_coords() -> impl Effect + use<> {
-    components_set_with_query_data::<_, _, &LookAtSphericalCoords>(
-        |(transform,): (Transform,), coords| {
-            let theta_unit_circle_coords = Vec2::new(coords.theta.cos(), coords.theta.sin());
-            let phi_unit_circle_coords = Vec2::new(coords.phi.cos(), coords.phi.sin());
-
-            let xy = theta_unit_circle_coords * phi_unit_circle_coords.x;
-            let look_at = xy.extend(phi_unit_circle_coords.y) + transform.translation;
-
-            (transform.looking_at(look_at, Vec3::Z),)
         },
     )
 }

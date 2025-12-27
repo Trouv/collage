@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
 use bevy_pipe_affect::prelude::*;
 
-use crate::clear_skies::paint::PaintSkiesPlugin;
+use crate::clear_skies::paint_skies::PaintSkiesPlugin;
 use crate::clear_skies::state::ClearSkiesState;
 use crate::clear_skies::transition::{ClearSkiesAssetCollection, setup};
 
