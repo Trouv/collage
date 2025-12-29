@@ -12,17 +12,13 @@ pub fn setup(
 ) -> Result<impl Effect + use<>, GltfAssetNotStrongPath> {
     Ok((
         asset_server_load_and(
-            GltfAssetLabel::Scene(0).from_asset(assets.torus.path().ok_or(GltfAssetNotStrongPath)?),
+            GltfAssetLabel::Scene(0).from_asset(assets.cube.path().ok_or(GltfAssetNotStrongPath)?),
             |handle| {
                 (0..10)
-                    .map(|torus_num| {
+                    .map(|cube_num| {
                         command_spawn((
                             SceneRoot(handle.clone()),
-                            Transform::from_xyz(
-                                10.0,
-                                torus_num as f32,
-                                3.0 * (torus_num - 5) as f32,
-                            ),
+                            Transform::from_xyz(10.0, cube_num as f32, 3.0 * (cube_num - 5) as f32),
                         ))
                     })
                     .collect::<Vec<_>>()
@@ -34,6 +30,6 @@ pub fn setup(
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Resource, AssetCollection)]
 pub struct ClearSkiesAssetCollection {
-    #[asset(path = "models/torus.gltf")]
-    torus: Handle<Gltf>,
+    #[asset(path = "models/cube.glb")]
+    cube: Handle<Gltf>,
 }
