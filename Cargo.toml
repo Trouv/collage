@@ -16,6 +16,7 @@ opt-level = 3
 
 [dependencies]
 bevy = "0.17"
+bevy-inspector-egui = "0.35.0"
 bevy_asset_loader = "0.24.0"
 bevy_pipe_affect = { version = "0.1.0", features = ["asset_server", "derive"] }
 clap = { version = "4.5.53", features = ["derive", "env"] }

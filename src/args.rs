@@ -6,4 +6,7 @@ pub struct DevArgs {
     /// Enable wireframes on meshes.
     #[arg(short, long, env)]
     pub wireframe: bool,
+    /// Enable bevy_inspector_egui.
+    #[arg(short, long, env)]
+    pub inspector: bool,
 }
