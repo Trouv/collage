@@ -3,6 +3,9 @@ use bevy_asset_loader::asset_collection::AssetCollection;
 use bevy_pipe_affect::prelude::*;
 use thiserror::Error;
 
+use crate::clear_skies::paint_skies::Paintable;
+use crate::clear_skies::render_layers::PAINTABLE_LAYER;
+
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, Error)]
 #[error("GLTF assets handles should be strong paths")]
 pub struct GltfAssetNotStrongPath;
@@ -19,12 +22,13 @@ pub fn setup(
                         command_spawn((
                             SceneRoot(handle.clone()),
                             Transform::from_xyz(10.0, cube_num as f32, 3.0 * (cube_num - 5) as f32),
+                            Paintable,
                         ))
                     })
                     .collect::<Vec<_>>()
             },
         ),
-        command_spawn(DirectionalLight::default()),
+        command_spawn((DirectionalLight::default(), PAINTABLE_LAYER)),
     ))
 }
 

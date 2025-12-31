@@ -16,6 +16,7 @@ use crate::clear_skies::paint_skies::spherical_coords::{
     LookAtSphericalCoords,
     SphericalCoordsBounds,
 };
+use crate::clear_skies::render_layers::PAINTABLE_LAYER;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Reflect, Actionlike)]
 pub enum PaintSkiesAction {
@@ -75,6 +76,7 @@ pub fn spawn_player(
             min_phi: -3.0 * PI / 8.0,
         },
         LookAtSphericalCoords::default(),
+        PAINTABLE_LAYER,
     )))
 }
 

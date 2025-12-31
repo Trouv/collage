@@ -3,6 +3,7 @@ use bevy_pipe_affect::prelude::*;
 use leafwing_input_manager::prelude::*;
 
 use crate::clear_skies::ClearSkiesState;
+use crate::clear_skies::paint_skies::paint_meshes::PaintMeshesPlugin;
 use crate::clear_skies::paint_skies::player::{
     PaintSkiesAction,
     rotate_spherical_coords,
@@ -17,20 +18,23 @@ pub struct PaintSkiesPlugin;
 
 impl Plugin for PaintSkiesPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(InputManagerPlugin::<PaintSkiesAction>::default())
-            .init_resource::<PaintSkiesSettings>()
-            .add_systems(
-                OnEnter(ClearSkiesState::PaintSkies),
-                spawn_player.pipe(affect),
+        app.add_plugins((
+            InputManagerPlugin::<PaintSkiesAction>::default(),
+            PaintMeshesPlugin,
+        ))
+        .init_resource::<PaintSkiesSettings>()
+        .add_systems(
+            OnEnter(ClearSkiesState::PaintSkies),
+            spawn_player.pipe(affect),
+        )
+        .add_systems(
+            FixedUpdate,
+            (
+                switch_gamepads.pipe(affect),
+                rotate_spherical_coords.pipe(affect),
+                look_at_spherical_coords.pipe(affect),
             )
-            .add_systems(
-                FixedUpdate,
-                (
-                    switch_gamepads.pipe(affect),
-                    rotate_spherical_coords.pipe(affect),
-                    look_at_spherical_coords.pipe(affect),
-                )
-                    .run_if(in_state(ClearSkiesState::PaintSkies)),
-            );
+                .run_if(in_state(ClearSkiesState::PaintSkies)),
+        );
     }
 }
