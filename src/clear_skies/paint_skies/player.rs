@@ -36,7 +36,6 @@ pub fn switch_gamepads(
 ) -> Vec<impl Effect + use<>> {
     gamepad_events
         .read()
-        .into_iter()
         .map(|event| {
             let (GamepadEvent::Connection(GamepadConnectionEvent {
                 gamepad: entity, ..

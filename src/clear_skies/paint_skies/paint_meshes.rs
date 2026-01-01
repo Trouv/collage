@@ -8,7 +8,6 @@ use bevy_pipe_affect::prelude::*;
 
 use crate::clear_skies::ClearSkiesState;
 use crate::clear_skies::render_layers::PAINTABLE_LAYER;
-use crate::state::GameState;
 
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, Hash, Reflect)]
 pub struct PaintMeshesPlugin;
