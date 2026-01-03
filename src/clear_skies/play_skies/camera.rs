@@ -14,6 +14,7 @@ pub fn spawn_camera() -> impl Effect {
         PAINTED_LAYER,
         Camera {
             order: 1,
+            clear_color: ClearColorConfig::Custom(Color::srgb(0.0, 0.4, 1.0)),
             ..default()
         },
     ))
