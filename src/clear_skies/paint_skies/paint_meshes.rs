@@ -114,10 +114,46 @@ fn propagate_paintable_on_scenes(
     }
 }
 
+/// `Effect` that adds an asset to an `Assets` resource and can produce more effects with the
+/// `Handle`.
+#[derive(Default, Debug, PartialEq, Eq, Copy, Clone, Hash, Reflect)]
+pub struct AssetsAddAnd<A, E, F>
+where
+    A: Asset,
+    E: Effect,
+    F: FnOnce(Handle<A>) -> E,
+{
+    pub asset: A,
+    pub f: F,
+}
+
+pub fn assets_add_and<A, E, F>(asset: A, f: F) -> AssetsAddAnd<A, E, F>
+where
+    A: Asset,
+    E: Effect,
+    F: FnOnce(Handle<A>) -> E,
+{
+    AssetsAddAnd { asset, f }
+}
+
+impl<A, E, F> Effect for AssetsAddAnd<A, E, F>
+where
+    A: Asset,
+    E: Effect,
+    F: FnOnce(Handle<A>) -> E,
+{
+    type MutParam = (ResMut<'static, Assets<A>>, E::MutParam);
+
+    fn affect(self, param: &mut <Self::MutParam as bevy::ecs::system::SystemParam>::Item<'_, '_>) {
+        let handle = param.0.add(self.asset);
+        (self.f)(handle).affect(&mut param.1);
+    }
+}
+
 fn paint_meshes(
     timer: Res<PaintMeshesTimer>,
     paintable_meshes: Query<(&Mesh3d, &GlobalTransform), With<Paintable>>,
-    mut mesh_assets: ResMut<Assets<Mesh>>,
+    mesh_assets: Res<Assets<Mesh>>,
     paintable_camera: Single<(&Camera, &GlobalTransform), With<Paintable>>,
     play_skies_camera: Single<(&Camera, &GlobalTransform), With<PlaySkiesCamera>>,
 ) -> Option<Vec<impl Effect + use<>>> {
@@ -171,17 +207,13 @@ fn paint_meshes(
 
                             let mesh = Mesh::from(centered_triangle);
 
-                            let mesh_handle = mesh_assets.add(mesh);
-
                             // Note: We don't need to adjust this relative to camera translation
                             // since we already calculated it in world-space
                             let transform = Transform::from_translation(centroid);
 
-                            Some(command_spawn((
-                                Mesh3d(mesh_handle),
-                                transform,
-                                PAINTED_LAYER,
-                            )))
+                            Some(assets_add_and(mesh, move |mesh_handle| {
+                                command_spawn((Mesh3d(mesh_handle), transform, PAINTED_LAYER))
+                            }))
                         })
                         .collect::<Vec<_>>();
 
