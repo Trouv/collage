@@ -43,7 +43,7 @@ struct PaintMeshesTimer(Timer);
 
 impl Default for PaintMeshesTimer {
     fn default() -> Self {
-        PaintMeshesTimer(Timer::new(Duration::from_millis(100), TimerMode::Repeating))
+        PaintMeshesTimer(Timer::new(Duration::from_millis(200), TimerMode::Repeating))
     }
 }
 
