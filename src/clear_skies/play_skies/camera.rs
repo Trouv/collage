@@ -11,6 +11,7 @@ pub fn spawn_camera() -> impl Effect {
     command_spawn((
         Camera3d::default(),
         PlaySkiesCamera,
+        PAINTED_LAYER,
         Camera {
             order: 1,
             ..default()
