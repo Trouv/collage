@@ -3,6 +3,7 @@ use bevy_asset_loader::asset_collection::AssetCollection;
 use bevy_pipe_affect::prelude::*;
 use thiserror::Error;
 
+use crate::clear_skies::ClearSkiesState;
 use crate::clear_skies::paint_skies::Paintable;
 use crate::clear_skies::render_layers::PAINTABLE_LAYER;
 
@@ -10,7 +11,7 @@ use crate::clear_skies::render_layers::PAINTABLE_LAYER;
 #[error("GLTF assets handles should be strong paths")]
 pub struct GltfAssetNotStrongPath;
 
-pub fn setup(
+pub fn spawn_scene(
     assets: Res<ClearSkiesAssetCollection>,
 ) -> Result<impl Effect + use<>, GltfAssetNotStrongPath> {
     Ok((
@@ -35,5 +36,9 @@ pub fn setup(
 #[derive(Debug, Default, Clone, PartialEq, Eq, Resource, AssetCollection)]
 pub struct ClearSkiesAssetCollection {
     #[asset(path = "models/cube.glb")]
-    cube: Handle<Gltf>,
+    pub cube: Handle<Gltf>,
+}
+
+pub fn proceed_to_paint_skies() -> ResSet<NextState<ClearSkiesState>> {
+    res_set(NextState::Pending(ClearSkiesState::PaintSkies))
 }

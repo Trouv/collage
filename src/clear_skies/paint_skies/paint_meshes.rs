@@ -115,12 +115,19 @@ fn propagate_paintable_on_scenes(
 //fn paint_meshes(
 //paint_meshes: Res<PaintMeshesTimer>,
 //timer: Res<PaintMeshesTimer>,
+//paintable_meshes: Query<(&Mesh3d, &GlobalTransform), With<Paintable>>,
+//mesh_assets: Assets<Mesh>,
+//paintable_camera: Single<&Camera3d, With<Paintable>>,
 //) -> Option<impl Effect + use<>> {
 //if timer.just_finished() {
-//// Spawn Some meshes in RenderLayer 1 that are based off the screen coordinates of meshes in
-//// the real world (give these marker components tbh).
-//// Orthographic projection (so we don't have to scale things up as we move them further
-//// from the cmaera)
+//paintable_meshes
+//.iter()
+//.map(|(mesh, global_transform)| {
+//let mesh = mesh_assets.get(mesh)?;
+
+//mesh.triangles().map(|mut triangle| triangle.vertices.map())
+//})
+//.collect::<Option<_>>()
 //} else {
 //None
 //}

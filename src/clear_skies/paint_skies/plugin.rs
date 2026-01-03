@@ -12,6 +12,7 @@ use crate::clear_skies::paint_skies::player::{
 };
 use crate::clear_skies::paint_skies::settings::PaintSkiesSettings;
 use crate::clear_skies::paint_skies::spherical_coords::look_at_spherical_coords;
+use crate::state::GameState;
 
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, Hash, Reflect)]
 pub struct PaintSkiesPlugin;
@@ -23,10 +24,7 @@ impl Plugin for PaintSkiesPlugin {
             PaintMeshesPlugin,
         ))
         .init_resource::<PaintSkiesSettings>()
-        .add_systems(
-            OnEnter(ClearSkiesState::PaintSkies),
-            spawn_player.pipe(affect),
-        )
+        .add_systems(OnEnter(ClearSkiesState::Setup), spawn_player.pipe(affect))
         .add_systems(
             FixedUpdate,
             (

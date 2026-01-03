@@ -76,6 +76,11 @@ pub fn spawn_player(
         },
         LookAtSphericalCoords::default(),
         PAINTABLE_LAYER,
+        Camera {
+            order: 2,
+            clear_color: ClearColorConfig::None,
+            ..default()
+        },
     )))
 }
 

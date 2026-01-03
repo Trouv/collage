@@ -9,6 +9,7 @@ pub enum ClearSkiesState {
     #[default]
     /// Loading state...
     Loading,
+    Setup,
     /// The skybox is being drawn by the camera.
     PaintSkies,
 }
