@@ -16,6 +16,8 @@ pub struct PaintMeshesPlugin;
 impl Plugin for PaintMeshesPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<PaintMeshesTimer>()
+            .init_resource::<PaintLayerSettings>()
+            .init_resource::<LayerIndex>()
             .add_systems(
                 Startup,
                 (|| command_spawn(Observer::new(propagate_paintable_on_scenes.pipe(affect))))
@@ -150,15 +152,39 @@ where
     }
 }
 
+/// Index for the paint mesh layer.
+#[derive(
+    Default, Debug, PartialEq, Eq, Copy, Clone, Hash, Reflect, Deref, DerefMut, Resource, Component,
+)]
+pub struct LayerIndex(u32);
+
+/// Settings for the logic of painting layers.
+#[derive(Debug, PartialEq, Copy, Clone, Reflect, Resource)]
+pub struct PaintLayerSettings {
+    pub zero_layer_distance: f32,
+    pub layer_distance_collapse_rate: f32,
+}
+
+impl Default for PaintLayerSettings {
+    fn default() -> Self {
+        PaintLayerSettings {
+            zero_layer_distance: 1000.0,
+            layer_distance_collapse_rate: 0.95,
+        }
+    }
+}
+
 fn paint_meshes(
     timer: Res<PaintMeshesTimer>,
     paintable_meshes: Query<(&Mesh3d, &GlobalTransform), With<Paintable>>,
     mesh_assets: Res<Assets<Mesh>>,
     paintable_camera: Single<(&Camera, &GlobalTransform), With<Paintable>>,
     play_skies_camera: Single<(&Camera, &GlobalTransform), With<PlaySkiesCamera>>,
-) -> Option<Vec<impl Effect + use<>>> {
+    layer_index: Res<LayerIndex>,
+    paint_layer_settings: Res<PaintLayerSettings>,
+) -> Option<(Vec<impl Effect + use<>>, ResSet<LayerIndex>)> {
     if timer.just_finished() {
-        Some(
+        Some((
             paintable_meshes
                 .iter()
                 .flat_map(|(mesh, mesh_transform)| {
@@ -192,7 +218,14 @@ fn paint_meshes(
                                         )
                                         .ok()?;
 
-                                    Some(play_skies_ray.get_point(10.0))
+                                    Some(
+                                        play_skies_ray.get_point(
+                                            paint_layer_settings.zero_layer_distance
+                                                * paint_layer_settings
+                                                    .layer_distance_collapse_rate
+                                                    .powf(**layer_index as f32),
+                                        ),
+                                    )
                                 })
                                 .collect::<Option<Vec<_>>>()?;
 
@@ -221,7 +254,8 @@ fn paint_meshes(
                 })
                 .flatten()
                 .collect::<Vec<_>>(),
-        )
+            res_set(LayerIndex(**layer_index + 1)),
+        ))
     } else {
         None
     }
