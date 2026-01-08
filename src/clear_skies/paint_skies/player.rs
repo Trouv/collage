@@ -1,5 +1,6 @@
 use std::f32::consts::PI;
 
+use bevy::camera::RenderTarget;
 use bevy::input::gamepad::{
     GamepadAxisChangedEvent,
     GamepadButtonChangedEvent,
@@ -17,6 +18,7 @@ use crate::clear_skies::paint_skies::spherical_coords::{
     LookAtSphericalCoords,
     SphericalCoordsBounds,
 };
+use crate::clear_skies::render_layers::PAINTABLE_LAYER;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Reflect, Actionlike)]
 pub enum PaintSkiesAction {
@@ -66,22 +68,39 @@ pub fn spawn_player(
         )
         .with_gamepad(entity);
 
-    Ok(command_spawn((
-        input_map,
-        Camera3d::default(),
-        PaintSkiesPlayer,
-        SphericalCoordsBounds {
-            max_phi: 3.0 * PI / 8.0,
-            min_phi: -3.0 * PI / 8.0,
+    Ok(command_spawn_and(
+        (
+            input_map,
+            Camera3d::default(),
+            PaintSkiesPlayer,
+            SphericalCoordsBounds {
+                max_phi: 3.0 * PI / 8.0,
+                min_phi: -3.0 * PI / 8.0,
+            },
+            LookAtSphericalCoords::default(),
+            Paintable,
+            Camera {
+                order: 2,
+                clear_color: ClearColorConfig::None,
+                ..default()
+            },
+        ),
+        |player_camera| {
+            command_spawn((
+                ChildOf(player_camera),
+                Camera3d::default(),
+                PAINTABLE_LAYER,
+                Camera {
+                    order: 3,
+                    clear_color: ClearColorConfig::None,
+                    target: RenderTarget::None {
+                        size: UVec2::splat(1),
+                    },
+                    ..default()
+                },
+            ))
         },
-        LookAtSphericalCoords::default(),
-        Paintable,
-        Camera {
-            order: 2,
-            clear_color: ClearColorConfig::None,
-            ..default()
-        },
-    )))
+    ))
 }
 
 pub fn rotate_spherical_coords(settings: Res<PaintSkiesSettings>) -> impl Effect + use<> {
