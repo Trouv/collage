@@ -19,6 +19,7 @@ bevy = "0.17"
 bevy-inspector-egui = { version = "0.35.0", optional = true }
 bevy_asset_loader = "0.24.0"
 bevy_pipe_affect = { version = "0.1.0", features = ["asset_server", "derive"] }
+bevy_simple_screen_boxing = "0.2.1"
 clap = { version = "4.5.53", features = ["derive", "env"] }
 leafwing-input-manager = "0.19.0"
 thiserror = "2.0.17"

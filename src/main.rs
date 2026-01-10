@@ -5,6 +5,7 @@ use bevy::prelude::*;
 use bevy_inspector_egui::bevy_egui::EguiPlugin;
 #[cfg(feature = "dev")]
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
+use bevy_simple_screen_boxing::CameraBoxingPlugin;
 use clap::Parser;
 
 use crate::args::DevArgs;
@@ -36,6 +37,7 @@ fn main() {
             ..default()
         }),
         ClearSkiesPlugin,
+        CameraBoxingPlugin,
     ))
     .init_state::<state::GameState>();
 

@@ -11,3 +11,5 @@ mod paint_skies;
 mod play_skies;
 
 mod render_layers;
+
+mod resolution;

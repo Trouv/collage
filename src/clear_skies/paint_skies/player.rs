@@ -9,6 +9,7 @@ use bevy::input::gamepad::{
 };
 use bevy::prelude::*;
 use bevy_pipe_affect::prelude::*;
+use bevy_simple_screen_boxing::CameraBox;
 use leafwing_input_manager::prelude::*;
 use thiserror::Error;
 
@@ -19,6 +20,7 @@ use crate::clear_skies::paint_skies::spherical_coords::{
     SphericalCoordsBounds,
 };
 use crate::clear_skies::render_layers::PAINTABLE_LAYER;
+use crate::clear_skies::resolution::ClearSkiesResolution;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Reflect, Actionlike)]
 pub enum PaintSkiesAction {
@@ -59,6 +61,7 @@ pub fn switch_gamepads(
 
 pub fn spawn_player(
     gamepads: Query<Entity, With<Gamepad>>,
+    resolution: Res<ClearSkiesResolution>,
 ) -> Result<impl Effect + use<>, NoGamepadsDetected> {
     let entity = gamepads.iter().next().ok_or(NoGamepadsDetected)?;
     let input_map = InputMap::default()
@@ -67,6 +70,8 @@ pub fn spawn_player(
             GamepadStick::LEFT.with_deadzone_symmetric(0.2),
         )
         .with_gamepad(entity);
+
+    let resolution = *resolution;
 
     Ok(command_spawn_and(
         (
@@ -79,17 +84,19 @@ pub fn spawn_player(
             },
             LookAtSphericalCoords::default(),
             Paintable,
+            CameraBox::from(resolution),
             Camera {
                 order: 2,
                 clear_color: ClearColorConfig::None,
                 ..default()
             },
         ),
-        |player_camera| {
+        move |player_camera| {
             command_spawn((
                 ChildOf(player_camera),
                 Camera3d::default(),
                 PAINTABLE_LAYER,
+                CameraBox::from(resolution),
                 Camera {
                     order: 3,
                     clear_color: ClearColorConfig::None,

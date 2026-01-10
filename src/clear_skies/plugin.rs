@@ -4,6 +4,7 @@ use bevy_pipe_affect::prelude::*;
 
 use crate::clear_skies::paint_skies::PaintSkiesPlugin;
 use crate::clear_skies::play_skies::PlaySkiesPlugin;
+use crate::clear_skies::resolution::ClearSkiesResolution;
 use crate::clear_skies::state::ClearSkiesState;
 use crate::clear_skies::transition::{
     ClearSkiesAssetCollection,
@@ -19,6 +20,7 @@ impl Plugin for ClearSkiesPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins((PaintSkiesPlugin, PlaySkiesPlugin))
             .add_sub_state::<ClearSkiesState>()
+            .init_resource::<ClearSkiesResolution>()
             .add_loading_state(
                 LoadingState::new(ClearSkiesState::Loading)
                     .continue_to_state(ClearSkiesState::Setup)
