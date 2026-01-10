@@ -1454,24 +1454,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bevy_simple_screen_boxing"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "abc46acb95580a9bffa4f4d3ddcfa5ce7a983f7602622c1f18baa01c224a8eaf"
-dependencies = [
- "bevy_app",
- "bevy_asset",
- "bevy_camera",
- "bevy_ecs",
- "bevy_image",
- "bevy_log",
- "bevy_math",
- "bevy_reflect",
- "bevy_render",
- "bevy_window",
-]
-
-[[package]]
 name = "bevy_sprite"
 version = "0.17.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2060,7 +2042,6 @@ dependencies = [
  "bevy-inspector-egui",
  "bevy_asset_loader",
  "bevy_pipe_affect",
- "bevy_simple_screen_boxing",
  "clap",
  "leafwing-input-manager",
  "thiserror 2.0.17",

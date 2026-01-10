@@ -2,9 +2,9 @@ use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
 use bevy_pipe_affect::prelude::*;
 
+use crate::clear_skies::camera::ClearSkiesResolution;
 use crate::clear_skies::paint_skies::PaintSkiesPlugin;
 use crate::clear_skies::play_skies::PlaySkiesPlugin;
-use crate::clear_skies::resolution::ClearSkiesResolution;
 use crate::clear_skies::state::ClearSkiesState;
 use crate::clear_skies::transition::{
     ClearSkiesAssetCollection,

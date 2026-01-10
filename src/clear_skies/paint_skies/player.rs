@@ -9,10 +9,10 @@ use bevy::input::gamepad::{
 };
 use bevy::prelude::*;
 use bevy_pipe_affect::prelude::*;
-use bevy_simple_screen_boxing::CameraBox;
 use leafwing_input_manager::prelude::*;
 use thiserror::Error;
 
+use crate::clear_skies::camera::ClearSkiesResolution;
 use crate::clear_skies::paint_skies::Paintable;
 use crate::clear_skies::paint_skies::settings::PaintSkiesSettings;
 use crate::clear_skies::paint_skies::spherical_coords::{
@@ -20,7 +20,6 @@ use crate::clear_skies::paint_skies::spherical_coords::{
     SphericalCoordsBounds,
 };
 use crate::clear_skies::render_layers::PAINTABLE_LAYER;
-use crate::clear_skies::resolution::ClearSkiesResolution;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Reflect, Actionlike)]
 pub enum PaintSkiesAction {
@@ -84,7 +83,6 @@ pub fn spawn_player(
             },
             LookAtSphericalCoords::default(),
             Paintable,
-            CameraBox::from(resolution),
             Camera {
                 order: 2,
                 clear_color: ClearColorConfig::None,
@@ -96,7 +94,6 @@ pub fn spawn_player(
                 ChildOf(player_camera),
                 Camera3d::default(),
                 PAINTABLE_LAYER,
-                CameraBox::from(resolution),
                 Camera {
                     order: 3,
                     clear_color: ClearColorConfig::None,
