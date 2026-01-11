@@ -8,4 +8,4 @@ mod spherical_coords;
 mod player;
 
 mod paint_meshes;
-pub use paint_meshes::Paintable;
+pub use paint_meshes::{Paintable, assets_add_and};

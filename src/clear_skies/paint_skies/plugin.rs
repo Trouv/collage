@@ -3,6 +3,7 @@ use bevy_pipe_affect::prelude::*;
 use leafwing_input_manager::prelude::*;
 
 use crate::clear_skies::ClearSkiesState;
+use crate::clear_skies::camera::CreateClearSkiesRenderTarget;
 use crate::clear_skies::paint_skies::paint_meshes::PaintMeshesPlugin;
 use crate::clear_skies::paint_skies::player::{
     PaintSkiesAction,
@@ -23,7 +24,12 @@ impl Plugin for PaintSkiesPlugin {
             PaintMeshesPlugin,
         ))
         .init_resource::<PaintSkiesSettings>()
-        .add_systems(OnEnter(ClearSkiesState::Setup), spawn_player.pipe(affect))
+        .add_systems(
+            OnEnter(ClearSkiesState::Setup),
+            spawn_player
+                .pipe(affect)
+                .after(CreateClearSkiesRenderTarget),
+        )
         .add_systems(
             FixedUpdate,
             (
