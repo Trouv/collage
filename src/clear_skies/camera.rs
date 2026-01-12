@@ -2,7 +2,39 @@ use bevy::prelude::*;
 use bevy::render::render_resource::TextureFormat;
 use bevy_pipe_affect::prelude::{command_insert_resource, *};
 
+use crate::clear_skies::ClearSkiesState;
 use crate::clear_skies::paint_skies::assets_add_and;
+
+#[derive(Default, Debug, PartialEq, Eq, Copy, Clone, Hash, Reflect)]
+pub struct ClearSkiesCameraPlugin;
+
+impl Plugin for ClearSkiesCameraPlugin {
+    fn build(&self, app: &mut App) {
+        app.init_resource::<ClearSkiesResolution>()
+            .insert_resource(ClearColor(Color::BLACK))
+            .add_systems(
+                OnEnter(ClearSkiesState::Setup),
+                (
+                    (create_clear_skies_render_target.pipe(affect), ApplyDeferred)
+                        .chain()
+                        .in_set(CreateClearSkiesRenderTarget),
+                ),
+            )
+            .add_systems(
+                Startup,
+                (|| command_spawn(Camera3d::default())).pipe(affect),
+            )
+            .add_systems(
+                Update,
+                (
+                    letterbox_or_pillarbox_viewport.pipe(affect),
+                    spawn_viewport
+                        .pipe(affect)
+                        .run_if(in_state(ClearSkiesState::Setup)),
+                ),
+            );
+    }
+}
 
 #[derive(Debug, PartialEq, Copy, Clone, Deref, DerefMut, Reflect, Resource)]
 pub struct ClearSkiesResolution(UVec2);
