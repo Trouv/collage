@@ -8,7 +8,7 @@ pub struct PaintSkiesSettings {
 impl Default for PaintSkiesSettings {
     fn default() -> Self {
         PaintSkiesSettings {
-            rotate_sensitivity: 0.05,
+            rotate_sensitivity: 0.02,
         }
     }
 }

@@ -65,7 +65,11 @@ pub fn spawn_player(
     let input_map = InputMap::default()
         .with_dual_axis(
             PaintSkiesAction::Rotate,
-            GamepadStick::LEFT.with_deadzone_symmetric(0.2),
+            GamepadStick::LEFT.with_deadzone_symmetric(0.1),
+        )
+        .with_dual_axis(
+            PaintSkiesAction::Rotate,
+            MouseMove::default().sensitivity(0.15).inverted_y(),
         )
         .with_gamepad(entity);
 
