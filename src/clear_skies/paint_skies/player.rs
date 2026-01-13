@@ -58,10 +58,8 @@ pub fn switch_gamepads(
 }
 
 pub fn spawn_player(
-    gamepads: Query<Entity, With<Gamepad>>,
     render_target: Res<ClearSkiesRenderTarget>,
 ) -> Result<impl Effect + use<>, NoGamepadsDetected> {
-    let entity = gamepads.iter().next().ok_or(NoGamepadsDetected)?;
     let input_map = InputMap::default()
         .with_dual_axis(
             PaintSkiesAction::Rotate,
@@ -70,8 +68,7 @@ pub fn spawn_player(
         .with_dual_axis(
             PaintSkiesAction::Rotate,
             MouseMove::default().sensitivity(0.15).inverted_y(),
-        )
-        .with_gamepad(entity);
+        );
 
     Ok(command_spawn((
         input_map,
