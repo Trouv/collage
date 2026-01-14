@@ -26,8 +26,10 @@ pub enum PaintSkiesAction {
     Rotate,
 }
 
+/// The camera controlled in the paint skies state whose subjects get painted.
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, Hash, Reflect, Component)]
-pub struct PaintSkiesPlayer;
+#[require(Name = "PaintSkiesCamera")]
+pub struct PaintSkiesCamera;
 
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, Hash, Reflect, Error)]
 #[error("no gamepads detected")]
@@ -48,7 +50,7 @@ pub fn switch_gamepads(
             let entity = *entity;
 
 
-            components_set_filtered_with::<_, _, With<PaintSkiesPlayer>>(
+            components_set_filtered_with::<_, _, With<PaintSkiesCamera>>(
                 move |(input_map,): (InputMap<PaintSkiesAction>,)| {
                     (input_map.with_gamepad(entity),)
                 },
@@ -73,7 +75,7 @@ pub fn spawn_player(
     Ok(command_spawn((
         input_map,
         Camera3d::default(),
-        PaintSkiesPlayer,
+        PaintSkiesCamera,
         SphericalCoordsBounds {
             max_phi: 3.0 * PI / 8.0,
             min_phi: -3.0 * PI / 8.0,
@@ -96,7 +98,7 @@ pub fn rotate_spherical_coords(settings: Res<PaintSkiesSettings>) -> impl Effect
         _,
         _,
         (&ActionState<PaintSkiesAction>, &SphericalCoordsBounds),
-        With<PaintSkiesPlayer>,
+        With<PaintSkiesCamera>,
     >(
         move |(spherical_coords,): (LookAtSphericalCoords,), (action_state, bounds)| {
             let rotate_by = action_state.clamped_axis_pair(&PaintSkiesAction::Rotate);
