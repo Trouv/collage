@@ -4,6 +4,7 @@ pub use plugin::PaintSkiesPlugin;
 mod settings;
 
 mod spherical_coords;
+pub use spherical_coords::{LookAtSphericalCoords, SphericalCoordsBounds};
 
 mod player;
 

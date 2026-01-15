@@ -3,14 +3,9 @@ use bevy_pipe_affect::prelude::*;
 use leafwing_input_manager::prelude::*;
 
 use crate::clear_skies::ClearSkiesState;
-use crate::clear_skies::camera::CreateClearSkiesRenderTarget;
+use crate::clear_skies::camera::PaintSkiesAction;
 use crate::clear_skies::paint_skies::paint_meshes::PaintMeshesPlugin;
-use crate::clear_skies::paint_skies::player::{
-    PaintSkiesAction,
-    rotate_spherical_coords,
-    spawn_paint_skies_camera,
-    switch_gamepads,
-};
+use crate::clear_skies::paint_skies::player::{rotate_spherical_coords, switch_gamepads};
 use crate::clear_skies::paint_skies::settings::PaintSkiesSettings;
 use crate::clear_skies::paint_skies::spherical_coords::look_at_spherical_coords;
 
@@ -25,15 +20,9 @@ impl Plugin for PaintSkiesPlugin {
         ))
         .init_resource::<PaintSkiesSettings>()
         .add_systems(
-            OnEnter(ClearSkiesState::Setup),
-            spawn_paint_skies_camera
-                .pipe(affect)
-                .after(CreateClearSkiesRenderTarget),
-        )
-        .add_systems(
             FixedUpdate,
             (
-                switch_gamepads.pipe(affect),
+                switch_gamepads::<PaintSkiesAction>.pipe(affect),
                 rotate_spherical_coords.pipe(affect),
                 look_at_spherical_coords.pipe(affect),
             )

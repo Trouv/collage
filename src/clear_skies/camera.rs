@@ -1,9 +1,18 @@
+use std::f32::consts::PI;
+
+use bevy::camera::RenderTarget;
 use bevy::prelude::*;
 use bevy::render::render_resource::TextureFormat;
 use bevy_pipe_affect::prelude::{command_insert_resource, *};
+use leafwing_input_manager::prelude::*;
 
 use crate::clear_skies::ClearSkiesState;
-use crate::clear_skies::paint_skies::assets_add_and;
+use crate::clear_skies::paint_skies::{
+    LookAtSphericalCoords,
+    Paintable,
+    SphericalCoordsBounds,
+    assets_add_and,
+};
 
 #[derive(Default, Debug, PartialEq, Eq, Copy, Clone, Hash, Reflect)]
 pub struct ClearSkiesCameraPlugin;
@@ -15,10 +24,12 @@ impl Plugin for ClearSkiesCameraPlugin {
             .add_systems(
                 OnEnter(ClearSkiesState::Setup),
                 (
-                    (create_clear_skies_render_target.pipe(affect), ApplyDeferred)
-                        .chain()
-                        .in_set(CreateClearSkiesRenderTarget),
-                ),
+                    create_clear_skies_render_target.pipe(affect),
+                    ApplyDeferred,
+                    spawn_paint_skies_camera.pipe(affect),
+                )
+                    .chain()
+                    .in_set(CreateClearSkiesRenderTarget),
             )
             .add_systems(
                 Startup,
@@ -62,6 +73,47 @@ pub fn create_clear_skies_render_target(
         command_insert_resource(ClearSkiesRenderTarget(handle))
     })
 }
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Reflect, Actionlike)]
+pub enum PaintSkiesAction {
+    #[actionlike(DualAxis)]
+    Rotate,
+}
+
+pub fn spawn_paint_skies_camera(render_target: Res<ClearSkiesRenderTarget>) -> impl Effect + use<> {
+    let input_map = InputMap::default()
+        .with_dual_axis(
+            PaintSkiesAction::Rotate,
+            GamepadStick::LEFT.with_deadzone_symmetric(0.1),
+        )
+        .with_dual_axis(
+            PaintSkiesAction::Rotate,
+            MouseMove::default().sensitivity(0.15).inverted_y(),
+        );
+
+    command_spawn((
+        input_map,
+        Camera3d::default(),
+        PaintSkiesCamera,
+        SphericalCoordsBounds {
+            max_phi: 3.0 * PI / 8.0,
+            min_phi: -3.0 * PI / 8.0,
+        },
+        LookAtSphericalCoords::default(),
+        Paintable,
+        Camera {
+            order: 2,
+            clear_color: ClearColorConfig::None,
+            target: RenderTarget::from((**render_target).clone()),
+            ..default()
+        },
+    ))
+}
+
+/// The camera controlled in the paint skies state whose subjects get painted.
+#[derive(Debug, Default, Copy, Clone, PartialEq, Eq, Hash, Reflect, Component)]
+#[require(Name = "PaintSkiesCamera")]
+pub struct PaintSkiesCamera;
 
 #[derive(Default, Debug, PartialEq, Eq, Copy, Clone, Hash, Reflect, Component)]
 struct ClearSkiesViewport;
