@@ -59,9 +59,7 @@ pub fn switch_gamepads(
         .collect()
 }
 
-pub fn spawn_player(
-    render_target: Res<ClearSkiesRenderTarget>,
-) -> Result<impl Effect + use<>, NoGamepadsDetected> {
+pub fn spawn_paint_skies_camera(render_target: Res<ClearSkiesRenderTarget>) -> impl Effect + use<> {
     let input_map = InputMap::default()
         .with_dual_axis(
             PaintSkiesAction::Rotate,
@@ -72,7 +70,7 @@ pub fn spawn_player(
             MouseMove::default().sensitivity(0.15).inverted_y(),
         );
 
-    Ok(command_spawn((
+    command_spawn((
         input_map,
         Camera3d::default(),
         PaintSkiesCamera,
@@ -88,7 +86,7 @@ pub fn spawn_player(
             target: RenderTarget::from((**render_target).clone()),
             ..default()
         },
-    )))
+    ))
 }
 
 pub fn rotate_spherical_coords(settings: Res<PaintSkiesSettings>) -> impl Effect + use<> {

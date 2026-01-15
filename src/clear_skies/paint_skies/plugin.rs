@@ -8,7 +8,7 @@ use crate::clear_skies::paint_skies::paint_meshes::PaintMeshesPlugin;
 use crate::clear_skies::paint_skies::player::{
     PaintSkiesAction,
     rotate_spherical_coords,
-    spawn_player,
+    spawn_paint_skies_camera,
     switch_gamepads,
 };
 use crate::clear_skies::paint_skies::settings::PaintSkiesSettings;
@@ -26,7 +26,7 @@ impl Plugin for PaintSkiesPlugin {
         .init_resource::<PaintSkiesSettings>()
         .add_systems(
             OnEnter(ClearSkiesState::Setup),
-            spawn_player
+            spawn_paint_skies_camera
                 .pipe(affect)
                 .after(CreateClearSkiesRenderTarget),
         )
