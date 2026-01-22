@@ -11,7 +11,7 @@ use crate::clear_skies::paint_skies::spherical_coords::{
     SphericalCoordsBounds,
 };
 
-pub fn rotate_spherical_coords(settings: Res<PaintSkiesSettings>) -> impl Effect + use<> {
+pub fn control_spherical_coords(settings: Res<PaintSkiesSettings>) -> impl Effect + use<> {
     let rotate_sensitivity = settings.rotate_sensitivity;
 
     components_set_filtered_with_query_data::<

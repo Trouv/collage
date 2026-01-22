@@ -3,8 +3,8 @@ use bevy_pipe_affect::prelude::*;
 
 use crate::clear_skies::ClearSkiesState;
 use crate::clear_skies::camera::PaintSkiesAction;
+use crate::clear_skies::paint_skies::control_spherical_coords::control_spherical_coords;
 use crate::clear_skies::paint_skies::paint_meshes::PaintMeshesPlugin;
-use crate::clear_skies::paint_skies::player::rotate_spherical_coords;
 use crate::clear_skies::paint_skies::settings::PaintSkiesSettings;
 use crate::clear_skies::paint_skies::spherical_coords::look_at_spherical_coords;
 use crate::clear_skies::switch_gamepads::SwitchGamepadsPlugin;
@@ -22,7 +22,7 @@ impl Plugin for PaintSkiesPlugin {
         .add_systems(
             FixedUpdate,
             (
-                rotate_spherical_coords.pipe(affect),
+                control_spherical_coords.pipe(affect),
                 look_at_spherical_coords.pipe(affect),
             )
                 .run_if(in_state(ClearSkiesState::PaintSkies)),
