@@ -8,10 +8,12 @@ use thiserror::Error;
 use crate::clear_skies::ClearSkiesState;
 use crate::clear_skies::paint_skies::Paintable;
 
+/// GLTF assets handles should be strong paths.
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, Error)]
 #[error("GLTF assets handles should be strong paths")]
 pub struct GltfAssetNotStrongPath;
 
+/// A dummy scene for prototyping..
 pub fn spawn_scene(
     assets: Res<ClearSkiesAssetCollection>,
 ) -> Result<impl Effect + use<>, GltfAssetNotStrongPath> {
@@ -32,12 +34,15 @@ pub fn spawn_scene(
     ),))
 }
 
+/// Asset collection for the clear skies scenes.
 #[derive(Debug, Default, Clone, PartialEq, Eq, Resource, AssetCollection)]
 pub struct ClearSkiesAssetCollection {
+    /// Basic cube mash.
     #[asset(path = "models/cube.glb")]
     pub cube: Handle<Gltf>,
 }
 
+/// Go to clear skies state when this system runs.
 pub fn proceed_to_paint_skies() -> ResSet<NextState<ClearSkiesState>> {
     res_set(NextState::Pending(ClearSkiesState::PaintSkies))
 }

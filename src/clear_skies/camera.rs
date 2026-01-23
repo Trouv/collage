@@ -14,6 +14,7 @@ use crate::clear_skies::paint_skies::{
     assets_add_and,
 };
 
+/// Plugin defining camera setup and logic for clear skies.
 #[derive(Default, Debug, PartialEq, Eq, Copy, Clone, Hash, Reflect)]
 pub struct ClearSkiesCameraPlugin;
 
@@ -47,6 +48,7 @@ impl Plugin for ClearSkiesCameraPlugin {
     }
 }
 
+/// Resource defining the actual pixel resolution of clear skies.
 #[derive(Debug, PartialEq, Copy, Clone, Deref, DerefMut, Reflect, Resource)]
 pub struct ClearSkiesResolution(UVec2);
 
@@ -60,9 +62,11 @@ impl Default for ClearSkiesResolution {
 #[derive(Default, Debug, PartialEq, Eq, Clone, Hash, Resource, Deref, DerefMut, Reflect)]
 pub struct ClearSkiesRenderTarget(Handle<Image>);
 
+/// System set that creates the texture in [`ClearSkiesRenderTarget`].
 #[derive(Default, Debug, PartialEq, Eq, Copy, Clone, Hash, Reflect, SystemSet)]
 pub struct CreateClearSkiesRenderTarget;
 
+/// System that creates [`ClearSkiesRenderTarget`].
 pub fn create_clear_skies_render_target(
     resolution: Res<ClearSkiesResolution>,
 ) -> impl Effect + use<> {
@@ -74,12 +78,15 @@ pub fn create_clear_skies_render_target(
     })
 }
 
+/// Actions for controlling the paint skies camera.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Reflect, Actionlike)]
 pub enum PaintSkiesAction {
+    /// Dual axis input for rotating the camera.
     #[actionlike(DualAxis)]
     Rotate,
 }
 
+/// Defines the paint skies camera.
 pub fn spawn_paint_skies_camera(render_target: Res<ClearSkiesRenderTarget>) -> impl Effect + use<> {
     let input_map = InputMap::default()
         .with_dual_axis(
@@ -115,9 +122,11 @@ pub fn spawn_paint_skies_camera(render_target: Res<ClearSkiesRenderTarget>) -> i
 #[require(Name = "PaintSkiesCamera")]
 pub struct PaintSkiesCamera;
 
+/// Marker component for the viewport UI node displaying the [`ClearSkiesRenderTarget`].
 #[derive(Default, Debug, PartialEq, Eq, Copy, Clone, Hash, Reflect, Component)]
 struct ClearSkiesViewport;
 
+/// Defines the viewport UI node displaying the [`ClearSkiesRenderTarget`].
 pub fn spawn_viewport(
     resolution: Res<ClearSkiesResolution>,
     texture: Res<ClearSkiesRenderTarget>,
@@ -134,6 +143,8 @@ pub fn spawn_viewport(
     ))
 }
 
+/// The [`ClearSkiesViewport`] will always be at the center of the screen with the correct aspect
+/// ratio.
 pub fn letterbox_or_pillarbox_viewport(
     window: Single<&Window>,
     resolution: Res<ClearSkiesResolution>,
