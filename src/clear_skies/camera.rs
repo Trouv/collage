@@ -60,7 +60,7 @@ impl Default for ClearSkiesResolution {
 
 /// The render target that will be created with a resolution of [`ClearSkiesResolution`].
 #[derive(Default, Debug, PartialEq, Eq, Clone, Hash, Resource, Deref, DerefMut, Reflect)]
-pub struct ClearSkiesRenderTarget(Handle<Image>);
+pub struct ClearSkiesRenderTarget(pub Handle<Image>);
 
 /// System set that creates the texture in [`ClearSkiesRenderTarget`].
 #[derive(Default, Debug, PartialEq, Eq, Copy, Clone, Hash, Reflect, SystemSet)]

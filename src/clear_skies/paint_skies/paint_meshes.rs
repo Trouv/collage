@@ -7,6 +7,7 @@ use bevy::scene::SceneInstanceReady;
 use bevy_pipe_affect::prelude::*;
 
 use crate::clear_skies::ClearSkiesState;
+use crate::clear_skies::camera::ClearSkiesRenderTarget;
 use crate::clear_skies::play_skies::PlaySkiesCamera;
 use crate::clear_skies::render_layers::{PAINTABLE_LAYER, PAINTED_LAYER};
 
@@ -174,6 +175,25 @@ impl Default for PaintLayerSettings {
     }
 }
 
+fn world_to_viewport_uv(
+    camera: &Camera,
+    camera_transform: &GlobalTransform,
+    world_position: Vec3,
+) -> Option<Vec2> {
+    let device_coords = camera.world_to_ndc(camera_transform, world_position)?.xy();
+
+    // ndc coords and uv corods are slightly different:
+    // | ndc    | uv    |
+    // | ------ | ----- |
+    // | y+     | y-    |
+    // | [-1,1] | [0,1] |
+    let big_uv_coords = Vec2::new(device_coords.x, -device_coords.y);
+
+    let uv_coords = (big_uv_coords + 1.0) / 2.0;
+
+    Some(uv_coords)
+}
+
 fn paint_meshes(
     timer: Res<PaintMeshesTimer>,
     paintable_meshes: Query<(&Mesh3d, &GlobalTransform), With<Paintable>>,
@@ -182,6 +202,7 @@ fn paint_meshes(
     play_skies_camera: Single<(&Camera, &GlobalTransform), With<PlaySkiesCamera>>,
     layer_index: Res<LayerIndex>,
     paint_layer_settings: Res<PaintLayerSettings>,
+    clear_skies_render_target: Res<ClearSkiesRenderTarget>,
 ) -> Option<(Vec<impl Effect + use<>>, ResSet<LayerIndex>)> {
     if timer.just_finished() {
         Some((
@@ -195,13 +216,20 @@ fn paint_meshes(
                         .triangles()
                         .ok()?
                         .flat_map(|triangle| {
-                            let vertices = triangle
+                            let vertex_uvs = triangle
                                 .vertices
                                 .into_iter()
                                 .map(|vertex| {
                                     let (paintable_camera, paintable_camera_transform) =
                                         *paintable_camera;
                                     let world_translation = mesh_transform.transform_point(vertex);
+
+                                    let uv = world_to_viewport_uv(
+                                        paintable_camera,
+                                        paintable_camera_transform,
+                                        world_translation,
+                                    )?;
+
                                     let viewport_coords = paintable_camera
                                         .world_to_viewport(
                                             paintable_camera_transform,
@@ -218,19 +246,19 @@ fn paint_meshes(
                                         )
                                         .ok()?;
 
-                                    Some(
-                                        play_skies_ray.get_point(
-                                            paint_layer_settings.zero_layer_distance
-                                                * paint_layer_settings
-                                                    .layer_distance_collapse_rate
-                                                    .powf(**layer_index as f32),
-                                        ),
-                                    )
+                                    let vertex = play_skies_ray.get_point(
+                                        paint_layer_settings.zero_layer_distance
+                                            * paint_layer_settings
+                                                .layer_distance_collapse_rate
+                                                .powf(**layer_index as f32),
+                                    );
+
+                                    Some((vertex, uv))
                                 })
                                 .collect::<Option<Vec<_>>>()?;
 
                             let world_triangle =
-                                Triangle3d::new(vertices[0], vertices[1], vertices[2]);
+                                Triangle3d::new(vertex_uvs[0].0, vertex_uvs[1].0, vertex_uvs[2].0);
 
                             let centroid = world_triangle.centroid();
 
@@ -240,12 +268,29 @@ fn paint_meshes(
 
                             let mesh = Mesh::from(centered_triangle);
 
+                            let mesh_with_uvs = mesh.with_inserted_attribute(
+                                Mesh::ATTRIBUTE_UV_0,
+                                [vertex_uvs[0].1, vertex_uvs[1].1, vertex_uvs[2].1]
+                                    .map(Into::<[f32; 2]>::into)
+                                    .to_vec(),
+                            );
+
                             // Note: We don't need to adjust this relative to camera translation
                             // since we already calculated it in world-space
                             let transform = Transform::from_translation(centroid);
 
-                            Some(assets_add_and(mesh, move |mesh_handle| {
-                                command_spawn((Mesh3d(mesh_handle), transform, PAINTED_LAYER))
+                            let material =
+                                StandardMaterial::from((**clear_skies_render_target).clone());
+
+                            Some(assets_add_and(mesh_with_uvs, move |mesh_handle| {
+                                assets_add_and(material, move |material_handle| {
+                                    command_spawn((
+                                        Mesh3d(mesh_handle),
+                                        MeshMaterial3d(material_handle),
+                                        transform,
+                                        PAINTED_LAYER,
+                                    ))
+                                })
                             }))
                         })
                         .collect::<Vec<_>>();
