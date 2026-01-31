@@ -19,7 +19,6 @@ pub fn spawn_camera(render_target: Res<ClearSkiesRenderTarget>) -> impl Effect +
             clear_color: ClearColorConfig::Custom(Color::srgb(0.0, 0.4, 1.0)),
             ..default()
         },
-        Msaa::Off,
         RenderTarget::from((**render_target).clone()),
     ))
 }

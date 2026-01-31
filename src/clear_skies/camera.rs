@@ -129,7 +129,6 @@ pub fn spawn_paint_skies_camera(render_target: Res<ClearSkiesRenderTarget>) -> i
         },
         RenderTarget::from((**render_target).clone()),
         CameraMainTextureUsages::default(),
-        Msaa::Off,
     ))
 }
 
