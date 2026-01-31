@@ -73,8 +73,12 @@ pub struct CreateClearSkiesRenderTarget;
 pub fn create_clear_skies_render_target(
     resolution: Res<ClearSkiesResolution>,
 ) -> impl Effect + use<> {
-    let mut image =
-        Image::new_target_texture(resolution.x, resolution.y, TextureFormat::bevy_default());
+    let mut image = Image::new_target_texture(
+        resolution.x,
+        resolution.y,
+        TextureFormat::bevy_default(),
+        None,
+    );
 
     image.asset_usage = RenderAssetUsages::all();
 
@@ -121,9 +125,9 @@ pub fn spawn_paint_skies_camera(render_target: Res<ClearSkiesRenderTarget>) -> i
         Camera {
             order: 2,
             clear_color: ClearColorConfig::None,
-            target: RenderTarget::from((**render_target).clone()),
             ..default()
         },
+        RenderTarget::from((**render_target).clone()),
         CameraMainTextureUsages::default(),
         Msaa::Off,
     ))

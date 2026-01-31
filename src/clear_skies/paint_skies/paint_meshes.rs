@@ -216,8 +216,12 @@ pub struct PaintSkiesCanvas(Handle<Image>);
 
 /// System that creates [`ClearSkiesRenderTarget`].
 pub fn create_paint_skies_canvas(resolution: Res<ClearSkiesResolution>) -> impl Effect + use<> {
-    let image =
-        Image::new_target_texture(resolution.x, resolution.y, TextureFormat::bevy_default());
+    let image = Image::new_target_texture(
+        resolution.x,
+        resolution.y,
+        TextureFormat::bevy_default(),
+        None,
+    );
 
     assets_add_and(image, |handle| {
         command_insert_resource(PaintSkiesCanvas(handle))
@@ -353,7 +357,10 @@ fn paint_meshes(
                         // since we already calculated it in world-space
                         let transform = Transform::from_translation(centroid);
 
-                        let material = StandardMaterial::from((**paint_skies_canvas).clone());
+                        let material = StandardMaterial {
+                            unlit: true,
+                            ..StandardMaterial::from((**paint_skies_canvas).clone())
+                        };
 
                         Some(assets_add_and(mesh_with_uvs, move |mesh_handle| {
                             assets_add_and(material, move |material_handle| {
