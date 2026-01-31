@@ -1,13 +1,16 @@
 use std::marker::PhantomData;
 use std::time::Duration;
 
+use bevy::asset::InvalidGenerationError;
 use bevy::camera::visibility::RenderLayers;
 use bevy::prelude::*;
+use bevy::render::render_resource::TextureFormat;
+use bevy::render::view::screenshot::{Screenshot, ScreenshotCaptured};
 use bevy::scene::SceneInstanceReady;
 use bevy_pipe_affect::prelude::*;
 
 use crate::clear_skies::ClearSkiesState;
-use crate::clear_skies::camera::ClearSkiesRenderTarget;
+use crate::clear_skies::camera::{ClearSkiesRenderTarget, ClearSkiesResolution};
 use crate::clear_skies::play_skies::PlaySkiesCamera;
 use crate::clear_skies::render_layers::{PAINTABLE_LAYER, PAINTED_LAYER};
 
@@ -20,15 +23,20 @@ impl Plugin for PaintMeshesPlugin {
             .init_resource::<PaintLayerSettings>()
             .init_resource::<LayerIndex>()
             .add_systems(
+                OnEnter(ClearSkiesState::Setup),
+                create_paint_skies_canvas.pipe(affect),
+            )
+            .register_type::<PaintSkiesCanvas>()
+            .add_systems(
                 Startup,
                 (|| command_spawn(Observer::new(propagate_paintable_on_scenes.pipe(affect))))
                     .pipe(affect),
             )
             .add_systems(
-                Update,
+                Last,
                 (
                     tick_paint_meshes_timer.pipe(affect),
-                    paint_meshes.pipe(affect),
+                    paint_canvas.pipe(affect),
                 )
                     .chain()
                     .run_if(in_state(ClearSkiesState::PaintSkies)),
@@ -153,6 +161,33 @@ where
     }
 }
 
+/// `Effect` that sets an existing asset to a new value.
+#[derive(Default, Debug, PartialEq, Eq, Clone, Hash, Reflect)]
+pub struct AssetsInsert<A>
+where
+    A: Asset,
+{
+    pub handle: Handle<A>,
+    pub asset: A,
+}
+
+impl<A> Effect for AssetsInsert<A>
+where
+    A: Asset,
+{
+    type MutParam = (
+        ResMut<'static, Assets<A>>,
+        <Result<(), InvalidGenerationError> as Effect>::MutParam,
+    );
+
+    fn affect(self, param: &mut <Self::MutParam as bevy::ecs::system::SystemParam>::Item<'_, '_>) {
+        match param.0.insert(&self.handle, self.asset) {
+            Ok(()) => (),
+            e => e.affect(&mut param.1),
+        }
+    }
+}
+
 /// Index for the paint mesh layer.
 #[derive(
     Default, Debug, PartialEq, Eq, Copy, Clone, Hash, Reflect, Deref, DerefMut, Resource, Component,
@@ -175,6 +210,20 @@ impl Default for PaintLayerSettings {
     }
 }
 
+#[derive(Default, Debug, PartialEq, Clone, Deref, DerefMut, Reflect, Resource)]
+#[reflect(Resource)]
+pub struct PaintSkiesCanvas(Handle<Image>);
+
+/// System that creates [`ClearSkiesRenderTarget`].
+pub fn create_paint_skies_canvas(resolution: Res<ClearSkiesResolution>) -> impl Effect + use<> {
+    let image =
+        Image::new_target_texture(resolution.x, resolution.y, TextureFormat::bevy_default());
+
+    assets_add_and(image, |handle| {
+        command_insert_resource(PaintSkiesCanvas(handle))
+    })
+}
+
 fn world_to_viewport_uv(
     camera: &Camera,
     camera_transform: &GlobalTransform,
@@ -182,126 +231,147 @@ fn world_to_viewport_uv(
 ) -> Option<Vec2> {
     let device_coords = camera.world_to_ndc(camera_transform, world_position)?.xy();
 
+    let small_device_coords = (device_coords + 1.0) / 2.0;
+
     // ndc coords and uv corods are slightly different:
     // | ndc    | uv    |
     // | ------ | ----- |
     // | y+     | y-    |
     // | [-1,1] | [0,1] |
-    let big_uv_coords = Vec2::new(device_coords.x, -device_coords.y);
-
-    let uv_coords = (big_uv_coords + 1.0) / 2.0;
+    let uv_coords = Vec2::new(small_device_coords.x, 1.0 - small_device_coords.y);
 
     Some(uv_coords)
 }
 
-fn paint_meshes(
+fn save_screenshot_to_canvas(
+    screenshot: On<ScreenshotCaptured>,
+    canvas: Res<PaintSkiesCanvas>,
+) -> AssetsInsert<Image> {
+    AssetsInsert {
+        handle: (**canvas).clone(),
+        asset: screenshot.image.clone(),
+    }
+}
+
+fn paint_canvas(
     timer: Res<PaintMeshesTimer>,
+    render_target: Res<ClearSkiesRenderTarget>,
+) -> Option<impl Effect + use<>> {
+    if timer.just_finished() {
+        let effect = command_spawn_and(Screenshot::image((**render_target).clone()), |entity| {
+            (
+                command_spawn(
+                    Observer::new(save_screenshot_to_canvas.pipe(affect)).with_entity(entity),
+                ),
+                command_spawn(Observer::new(paint_meshes.pipe(affect)).with_entity(entity)),
+            )
+        });
+
+        Some(effect)
+    } else {
+        None
+    }
+}
+fn paint_meshes(
+    _: On<ScreenshotCaptured>,
     paintable_meshes: Query<(&Mesh3d, &GlobalTransform), With<Paintable>>,
     mesh_assets: Res<Assets<Mesh>>,
     paintable_camera: Single<(&Camera, &GlobalTransform), With<Paintable>>,
     play_skies_camera: Single<(&Camera, &GlobalTransform), With<PlaySkiesCamera>>,
     layer_index: Res<LayerIndex>,
     paint_layer_settings: Res<PaintLayerSettings>,
-    clear_skies_render_target: Res<ClearSkiesRenderTarget>,
-) -> Option<(Vec<impl Effect + use<>>, ResSet<LayerIndex>)> {
-    if timer.just_finished() {
-        Some((
-            paintable_meshes
-                .iter()
-                .flat_map(|(mesh, mesh_transform)| {
-                    let mesh = mesh_assets.get(mesh)?;
+    paint_skies_canvas: Res<PaintSkiesCanvas>,
+) -> (Vec<impl Effect + use<>>, ResSet<LayerIndex>) {
+    (
+        paintable_meshes
+            .iter()
+            .flat_map(|(mesh, mesh_transform)| {
+                let mesh = mesh_assets.get(mesh)?;
 
-                    let spawn_commands = mesh
-                        .clone()
-                        .triangles()
-                        .ok()?
-                        .flat_map(|triangle| {
-                            let vertex_uvs = triangle
-                                .vertices
-                                .into_iter()
-                                .map(|vertex| {
-                                    let (paintable_camera, paintable_camera_transform) =
-                                        *paintable_camera;
-                                    let world_translation = mesh_transform.transform_point(vertex);
+                let spawn_commands = mesh
+                    .clone()
+                    .triangles()
+                    .ok()?
+                    .flat_map(|triangle| {
+                        let vertex_uvs = triangle
+                            .vertices
+                            .into_iter()
+                            .map(|vertex| {
+                                let (paintable_camera, paintable_camera_transform) =
+                                    *paintable_camera;
+                                let world_translation = mesh_transform.transform_point(vertex);
 
-                                    let uv = world_to_viewport_uv(
-                                        paintable_camera,
+                                let uv = world_to_viewport_uv(
+                                    paintable_camera,
+                                    paintable_camera_transform,
+                                    world_translation,
+                                )?;
+
+                                let viewport_coords = paintable_camera
+                                    .world_to_viewport(
                                         paintable_camera_transform,
                                         world_translation,
-                                    )?;
+                                    )
+                                    .ok()?;
 
-                                    let viewport_coords = paintable_camera
-                                        .world_to_viewport(
-                                            paintable_camera_transform,
-                                            world_translation,
-                                        )
-                                        .ok()?;
+                                let (play_skies_camera, play_skies_camera_transform) =
+                                    *play_skies_camera;
+                                let play_skies_ray = play_skies_camera
+                                    .viewport_to_world(play_skies_camera_transform, viewport_coords)
+                                    .ok()?;
 
-                                    let (play_skies_camera, play_skies_camera_transform) =
-                                        *play_skies_camera;
-                                    let play_skies_ray = play_skies_camera
-                                        .viewport_to_world(
-                                            play_skies_camera_transform,
-                                            viewport_coords,
-                                        )
-                                        .ok()?;
+                                let vertex = play_skies_ray.get_point(
+                                    paint_layer_settings.zero_layer_distance
+                                        * paint_layer_settings
+                                            .layer_distance_collapse_rate
+                                            .powf(**layer_index as f32),
+                                );
 
-                                    let vertex = play_skies_ray.get_point(
-                                        paint_layer_settings.zero_layer_distance
-                                            * paint_layer_settings
-                                                .layer_distance_collapse_rate
-                                                .powf(**layer_index as f32),
-                                    );
+                                Some((vertex, uv))
+                            })
+                            .collect::<Option<Vec<_>>>()?;
 
-                                    Some((vertex, uv))
-                                })
-                                .collect::<Option<Vec<_>>>()?;
+                        let world_triangle =
+                            Triangle3d::new(vertex_uvs[0].0, vertex_uvs[1].0, vertex_uvs[2].0);
 
-                            let world_triangle =
-                                Triangle3d::new(vertex_uvs[0].0, vertex_uvs[1].0, vertex_uvs[2].0);
+                        let centroid = world_triangle.centroid();
 
-                            let centroid = world_triangle.centroid();
+                        let centered_triangle = Triangle3d {
+                            vertices: world_triangle.vertices.map(|vertex| vertex - centroid),
+                        };
 
-                            let centered_triangle = Triangle3d {
-                                vertices: world_triangle.vertices.map(|vertex| vertex - centroid),
-                            };
+                        let mesh = Mesh::from(centered_triangle);
 
-                            let mesh = Mesh::from(centered_triangle);
+                        let mesh_with_uvs = mesh.with_inserted_attribute(
+                            Mesh::ATTRIBUTE_UV_0,
+                            [vertex_uvs[0].1, vertex_uvs[1].1, vertex_uvs[2].1]
+                                .map(Into::<[f32; 2]>::into)
+                                .to_vec(),
+                        );
 
-                            let mesh_with_uvs = mesh.with_inserted_attribute(
-                                Mesh::ATTRIBUTE_UV_0,
-                                [vertex_uvs[0].1, vertex_uvs[1].1, vertex_uvs[2].1]
-                                    .map(Into::<[f32; 2]>::into)
-                                    .to_vec(),
-                            );
+                        // Note: We don't need to adjust this relative to camera translation
+                        // since we already calculated it in world-space
+                        let transform = Transform::from_translation(centroid);
 
-                            // Note: We don't need to adjust this relative to camera translation
-                            // since we already calculated it in world-space
-                            let transform = Transform::from_translation(centroid);
+                        let material = StandardMaterial::from((**paint_skies_canvas).clone());
 
-                            let material =
-                                StandardMaterial::from((**clear_skies_render_target).clone());
+                        Some(assets_add_and(mesh_with_uvs, move |mesh_handle| {
+                            assets_add_and(material, move |material_handle| {
+                                command_spawn((
+                                    Mesh3d(mesh_handle),
+                                    MeshMaterial3d(material_handle),
+                                    transform,
+                                    PAINTED_LAYER,
+                                ))
+                            })
+                        }))
+                    })
+                    .collect::<Vec<_>>();
 
-                            Some(assets_add_and(mesh_with_uvs, move |mesh_handle| {
-                                assets_add_and(material, move |material_handle| {
-                                    command_spawn((
-                                        Mesh3d(mesh_handle),
-                                        MeshMaterial3d(material_handle),
-                                        transform,
-                                        PAINTED_LAYER,
-                                    ))
-                                })
-                            }))
-                        })
-                        .collect::<Vec<_>>();
-
-                    Some(spawn_commands)
-                })
-                .flatten()
-                .collect::<Vec<_>>(),
-            res_set(LayerIndex(**layer_index + 1)),
-        ))
-    } else {
-        None
-    }
+                Some(spawn_commands)
+            })
+            .flatten()
+            .collect::<Vec<_>>(),
+        res_set(LayerIndex(**layer_index + 1)),
+    )
 }

@@ -20,5 +20,6 @@ pub fn spawn_camera(render_target: Res<ClearSkiesRenderTarget>) -> impl Effect +
             target: RenderTarget::from((**render_target).clone()),
             ..default()
         },
+        Msaa::Off,
     ))
 }

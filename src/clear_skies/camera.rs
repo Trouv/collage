@@ -1,8 +1,9 @@
 use std::f32::consts::PI;
 
-use bevy::camera::RenderTarget;
+use bevy::asset::RenderAssetUsages;
+use bevy::camera::{CameraMainTextureUsages, RenderTarget};
 use bevy::prelude::*;
-use bevy::render::render_resource::TextureFormat;
+use bevy::render::render_resource::{TextureFormat, TextureUsages};
 use bevy_pipe_affect::prelude::{command_insert_resource, *};
 use leafwing_input_manager::prelude::*;
 
@@ -22,6 +23,7 @@ impl Plugin for ClearSkiesCameraPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<ClearSkiesResolution>()
             .insert_resource(ClearColor(Color::BLACK))
+            .register_type::<ClearSkiesRenderTarget>()
             .add_systems(
                 OnEnter(ClearSkiesState::Setup),
                 (
@@ -60,6 +62,7 @@ impl Default for ClearSkiesResolution {
 
 /// The render target that will be created with a resolution of [`ClearSkiesResolution`].
 #[derive(Default, Debug, PartialEq, Eq, Clone, Hash, Resource, Deref, DerefMut, Reflect)]
+#[reflect(Resource)]
 pub struct ClearSkiesRenderTarget(pub Handle<Image>);
 
 /// System set that creates the texture in [`ClearSkiesRenderTarget`].
@@ -70,8 +73,15 @@ pub struct CreateClearSkiesRenderTarget;
 pub fn create_clear_skies_render_target(
     resolution: Res<ClearSkiesResolution>,
 ) -> impl Effect + use<> {
-    let image =
+    let mut image =
         Image::new_target_texture(resolution.x, resolution.y, TextureFormat::bevy_default());
+
+    image.asset_usage = RenderAssetUsages::all();
+
+    image.texture_descriptor.usage |= TextureUsages::COPY_SRC
+        | TextureUsages::COPY_DST
+        | TextureUsages::TEXTURE_BINDING
+        | TextureUsages::RENDER_ATTACHMENT;
 
     assets_add_and(image, |handle| {
         command_insert_resource(ClearSkiesRenderTarget(handle))
@@ -114,6 +124,8 @@ pub fn spawn_paint_skies_camera(render_target: Res<ClearSkiesRenderTarget>) -> i
             target: RenderTarget::from((**render_target).clone()),
             ..default()
         },
+        CameraMainTextureUsages::default(),
+        Msaa::Off,
     ))
 }
 
