@@ -139,7 +139,7 @@ pub struct PaintSkiesCamera;
 
 /// Marker component for the viewport UI node displaying the [`ClearSkiesRenderTarget`].
 #[derive(Default, Debug, PartialEq, Eq, Copy, Clone, Hash, Reflect, Component)]
-struct ClearSkiesViewport;
+pub struct ClearSkiesViewport;
 
 /// Defines the viewport UI node displaying the [`ClearSkiesRenderTarget`].
 pub fn spawn_viewport(
@@ -155,6 +155,7 @@ pub fn spawn_viewport(
             justify_self: JustifySelf::Center,
             ..default()
         },
+        ZIndex(0),
     ))
 }
 

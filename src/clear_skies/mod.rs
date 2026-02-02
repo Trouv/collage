@@ -6,12 +6,13 @@ pub use state::ClearSkiesState;
 
 mod transition;
 
-mod paint_skies;
+pub mod paint_skies;
 
 mod play_skies;
 
 mod render_layers;
 
 mod camera;
+pub use camera::ClearSkiesViewport;
 
 mod switch_gamepads;

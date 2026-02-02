@@ -20,11 +20,11 @@ pub fn spawn_scene(
     Ok((asset_server_load_and(
         GltfAssetLabel::Scene(0).from_asset(assets.cube.path().ok_or(GltfAssetNotStrongPath)?),
         |handle| {
-            (0..10)
+            (0..2)
                 .map(|cube_num| {
                     command_spawn((
                         SceneRoot(handle.clone()),
-                        Transform::from_xyz(10.0, cube_num as f32, 3.0 * (cube_num - 5) as f32)
+                        Transform::from_xyz(10.0, cube_num as f32, 3.0 * (cube_num - 1) as f32)
                             .with_rotation(Quat::from_axis_angle(Vec3::Z, PI)),
                         Paintable,
                     ))

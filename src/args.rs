@@ -9,4 +9,7 @@ pub struct DevArgs {
     /// Enable bevy_inspector_egui.
     #[arg(short, long, env)]
     pub inspector: bool,
+    /// Add the ability to spawn a free camera with Ctrl+f.
+    #[arg(short, long, env)]
+    pub free_cam: bool,
 }

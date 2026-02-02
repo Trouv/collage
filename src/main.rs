@@ -16,6 +16,9 @@ mod clear_skies;
 
 mod args;
 
+#[cfg(feature = "dev")]
+mod toggle_free_camera;
+
 fn main() {
     let args = if cfg!(feature = "dev") {
         let args = DevArgs::parse();
@@ -50,9 +53,19 @@ fn main() {
     }
 
     #[cfg(feature = "dev")]
-    if args.inspector {
-        app.add_plugins(EguiPlugin::default())
-            .add_plugins(WorldInspectorPlugin::new());
+    {
+        if args.inspector {
+            app.add_plugins(EguiPlugin::default())
+                .add_plugins(WorldInspectorPlugin::new());
+        }
+
+        if args.free_cam {
+            use bevy::camera_controller::free_camera::FreeCameraPlugin;
+
+            use crate::toggle_free_camera::ToggleFreeCameraPlugin;
+
+            app.add_plugins((FreeCameraPlugin, ToggleFreeCameraPlugin::default()));
+        }
     }
 
     app.run();

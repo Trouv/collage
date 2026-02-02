@@ -9,4 +9,4 @@ pub use spherical_coords::{LookAtSphericalCoords, SphericalCoordsBounds};
 mod control_spherical_coords;
 
 mod paint_meshes;
-pub use paint_meshes::{Paintable, assets_add_and};
+pub use paint_meshes::{AssetsAddAnd, Paintable, assets_add_and};
