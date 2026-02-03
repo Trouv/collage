@@ -13,6 +13,5 @@ mod play_skies;
 mod render_layers;
 
 mod camera;
-pub use camera::ClearSkiesViewport;
 
 mod switch_gamepads;
