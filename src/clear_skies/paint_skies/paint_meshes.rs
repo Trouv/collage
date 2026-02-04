@@ -1,7 +1,5 @@
-use std::marker::PhantomData;
 use std::time::Duration;
 
-use bevy::asset::InvalidGenerationError;
 use bevy::camera::visibility::RenderLayers;
 use bevy::prelude::*;
 use bevy::render::render_resource::TextureFormat;
@@ -13,6 +11,13 @@ use crate::clear_skies::ClearSkiesState;
 use crate::clear_skies::camera::{ClearSkiesRenderTarget, ClearSkiesResolution};
 use crate::clear_skies::play_skies::PlaySkiesCamera;
 use crate::clear_skies::render_layers::{PAINTABLE_LAYER, PAINTED_LAYER};
+use crate::effects::{
+    AssetsInsert,
+    EntityCommandInsertRecursive,
+    assets_add_and,
+    assets_insert,
+    entity_command_insert_recursive,
+};
 
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, Hash, Reflect)]
 pub struct PaintMeshesPlugin;
@@ -70,121 +75,17 @@ fn tick_paint_meshes_timer(
     })
 }
 
-/// [`Effect`] that inserts a component recursively on relationship targets.
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Reflect)]
-pub struct EntityCommandInsertRecursive<RT, B>
-where
-    RT: RelationshipTarget,
-    B: Bundle + Clone,
-{
-    pub entity: Entity,
-    pub bundle: B,
-    _phantom: PhantomData<RT>,
-}
-
-impl<RT, B> EntityCommandInsertRecursive<RT, B>
-where
-    B: Bundle + Clone,
-    RT: RelationshipTarget,
-{
-    /// Construct a new [`EntityCommandInsertRecursive`].
-    fn new(entity: Entity, bundle: B) -> Self {
-        Self {
-            entity,
-            bundle,
-            _phantom: PhantomData,
-        }
-    }
-}
-
-impl<RT, B> Effect for EntityCommandInsertRecursive<RT, B>
-where
-    RT: RelationshipTarget,
-    B: Bundle + Clone,
-{
-    type MutParam = Commands<'static, 'static>;
-
-    fn affect(self, param: &mut <Self::MutParam as bevy::ecs::system::SystemParam>::Item<'_, '_>) {
-        param
-            .entity(self.entity)
-            .insert_recursive::<RT>(self.bundle);
-    }
-}
-
 fn propagate_paintable_on_scenes(
     instance_ready: On<SceneInstanceReady>,
     paintables: Query<(), With<Paintable>>,
 ) -> Option<EntityCommandInsertRecursive<Children, Paintable>> {
     if paintables.contains(instance_ready.entity) {
-        Some(EntityCommandInsertRecursive::new(
+        Some(entity_command_insert_recursive(
             instance_ready.entity,
             Paintable,
         ))
     } else {
         None
-    }
-}
-
-/// `Effect` that adds an asset to an `Assets` resource and can produce more effects with the
-/// `Handle`.
-#[derive(Default, Debug, PartialEq, Eq, Copy, Clone, Hash, Reflect)]
-pub struct AssetsAddAnd<A, E, F>
-where
-    A: Asset,
-    E: Effect,
-    F: FnOnce(Handle<A>) -> E,
-{
-    pub asset: A,
-    pub f: F,
-}
-
-pub fn assets_add_and<A, E, F>(asset: A, f: F) -> AssetsAddAnd<A, E, F>
-where
-    A: Asset,
-    E: Effect,
-    F: FnOnce(Handle<A>) -> E,
-{
-    AssetsAddAnd { asset, f }
-}
-
-impl<A, E, F> Effect for AssetsAddAnd<A, E, F>
-where
-    A: Asset,
-    E: Effect,
-    F: FnOnce(Handle<A>) -> E,
-{
-    type MutParam = (ResMut<'static, Assets<A>>, E::MutParam);
-
-    fn affect(self, param: &mut <Self::MutParam as bevy::ecs::system::SystemParam>::Item<'_, '_>) {
-        let handle = param.0.add(self.asset);
-        (self.f)(handle).affect(&mut param.1);
-    }
-}
-
-/// `Effect` that sets an existing asset to a new value.
-#[derive(Default, Debug, PartialEq, Eq, Clone, Hash, Reflect)]
-pub struct AssetsInsert<A>
-where
-    A: Asset,
-{
-    pub handle: Handle<A>,
-    pub asset: A,
-}
-
-impl<A> Effect for AssetsInsert<A>
-where
-    A: Asset,
-{
-    type MutParam = (
-        ResMut<'static, Assets<A>>,
-        <Result<(), InvalidGenerationError> as Effect>::MutParam,
-    );
-
-    fn affect(self, param: &mut <Self::MutParam as bevy::ecs::system::SystemParam>::Item<'_, '_>) {
-        match param.0.insert(&self.handle, self.asset) {
-            Ok(()) => (),
-            e => e.affect(&mut param.1),
-        }
     }
 }
 
@@ -251,10 +152,7 @@ fn save_screenshot_to_canvas(
     screenshot: On<ScreenshotCaptured>,
     canvas: Res<PaintSkiesCanvas>,
 ) -> AssetsInsert<Image> {
-    AssetsInsert {
-        handle: (**canvas).clone(),
-        asset: screenshot.image.clone(),
-    }
+    assets_insert((**canvas).clone(), screenshot.image.clone())
 }
 
 fn paint_canvas(

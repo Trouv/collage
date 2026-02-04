@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use bevy::render::render_resource::TextureFormat;
 use bevy_pipe_affect::prelude::*;
 
-use crate::clear_skies::paint_skies::{AssetsAddAnd, assets_add_and};
+use crate::effects::{AssetsAddAnd, assets_add_and};
 
 /// Debug plugin that spawns or despawns a flycam.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
