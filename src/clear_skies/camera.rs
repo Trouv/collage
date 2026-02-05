@@ -94,11 +94,16 @@ pub enum PaintSkiesAction {
     /// Dual axis input for rotating the camera.
     #[actionlike(DualAxis)]
     Rotate,
+    /// Button input for painting the sky.
+    #[actionlike(Button)]
+    Paint,
 }
 
 /// Defines the paint skies camera.
 pub fn spawn_paint_skies_camera(render_target: Res<ClearSkiesRenderTarget>) -> impl Effect + use<> {
     let input_map = InputMap::default()
+        .with(PaintSkiesAction::Paint, GamepadButton::RightTrigger)
+        .with(PaintSkiesAction::Paint, MouseButton::Left)
         .with_dual_axis(
             PaintSkiesAction::Rotate,
             GamepadStick::LEFT.with_deadzone_symmetric(0.1),

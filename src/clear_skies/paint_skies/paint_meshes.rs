@@ -6,9 +6,10 @@ use bevy::render::render_resource::TextureFormat;
 use bevy::render::view::screenshot::{Screenshot, ScreenshotCaptured};
 use bevy::scene::SceneInstanceReady;
 use bevy_pipe_affect::prelude::*;
+use leafwing_input_manager::prelude::*;
 
 use crate::clear_skies::ClearSkiesState;
-use crate::clear_skies::camera::{ClearSkiesRenderTarget, ClearSkiesResolution};
+use crate::clear_skies::camera::{ClearSkiesRenderTarget, ClearSkiesResolution, PaintSkiesAction};
 use crate::clear_skies::play_skies::PlaySkiesCamera;
 use crate::clear_skies::render_layers::{PAINTABLE_LAYER, PAINTED_LAYER};
 use crate::effects::{
@@ -65,11 +66,16 @@ impl Default for PaintMeshesTimer {
 
 fn tick_paint_meshes_timer(
     time: Res<Time>,
+    paint: Single<&ActionState<PaintSkiesAction>>,
 ) -> ResSetWith<impl FnOnce(PaintMeshesTimer) -> PaintMeshesTimer + use<>, PaintMeshesTimer> {
     let delta_time = time.delta();
 
+    let painting = paint.pressed(&PaintSkiesAction::Paint);
+
     res_set_with(move |mut timer: PaintMeshesTimer| {
-        timer.tick(delta_time);
+        if painting {
+            timer.tick(delta_time);
+        }
 
         timer
     })
