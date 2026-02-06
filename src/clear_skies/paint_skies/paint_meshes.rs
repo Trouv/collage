@@ -60,7 +60,7 @@ struct PaintMeshesTimer(Timer);
 
 impl Default for PaintMeshesTimer {
     fn default() -> Self {
-        PaintMeshesTimer(Timer::new(Duration::from_millis(200), TimerMode::Repeating))
+        PaintMeshesTimer(Timer::new(Duration::from_millis(100), TimerMode::Repeating))
     }
 }
 
@@ -180,6 +180,62 @@ fn paint_canvas(
         None
     }
 }
+
+struct TriangleWithUvs {
+    triangle: Triangle3d,
+    uvs: [Vec2; 3],
+}
+
+fn paint_triangle(
+    paint_layer_settings: &PaintLayerSettings,
+    layer_index: &LayerIndex,
+    mesh_transform: &GlobalTransform,
+    paintable_camera: &Camera,
+    paintable_camera_transform: &GlobalTransform,
+    play_skies_camera: &Camera,
+    play_skies_camera_transform: &GlobalTransform,
+) -> impl Fn(Triangle3d) -> Option<TriangleWithUvs> {
+    |triangle| {
+        let vertex_uvs = triangle
+            .vertices
+            .into_iter()
+            .map(|vertex| {
+                let world_translation = mesh_transform.transform_point(vertex);
+
+                let uv = world_to_viewport_uv(
+                    paintable_camera,
+                    paintable_camera_transform,
+                    world_translation,
+                )?;
+
+                let viewport_coords = paintable_camera
+                    .world_to_viewport(paintable_camera_transform, world_translation)
+                    .ok()?;
+
+                let play_skies_ray = play_skies_camera
+                    .viewport_to_world(play_skies_camera_transform, viewport_coords)
+                    .ok()?;
+
+                let vertex = play_skies_ray.get_point(
+                    paint_layer_settings.zero_layer_distance
+                        * paint_layer_settings
+                            .layer_distance_collapse_rate
+                            .powf(**layer_index as f32),
+                );
+
+                Some((vertex, uv))
+            })
+            .collect::<Option<Vec<_>>>()?;
+
+        let world_triangle = Triangle3d::new(vertex_uvs[0].0, vertex_uvs[1].0, vertex_uvs[2].0);
+
+        Some(TriangleWithUvs {
+            triangle: world_triangle,
+            uvs: [vertex_uvs[0].1, vertex_uvs[1].1, vertex_uvs[2].1],
+        })
+    }
+}
+
 fn paint_meshes(
     _: On<ScreenshotCaptured>,
     paintable_meshes: Query<(&Mesh3d, &GlobalTransform), With<Paintable>>,
@@ -196,51 +252,25 @@ fn paint_meshes(
             .flat_map(|(mesh, mesh_transform)| {
                 let mesh = mesh_assets.get(mesh)?;
 
+                let (paintable_camera, paintable_camera_transform) = *paintable_camera;
+
+                let (play_skies_camera, play_skies_camera_transform) = *play_skies_camera;
+
                 let spawn_commands = mesh
                     .clone()
                     .triangles()
                     .ok()?
-                    .flat_map(|triangle| {
-                        let vertex_uvs = triangle
-                            .vertices
-                            .into_iter()
-                            .map(|vertex| {
-                                let (paintable_camera, paintable_camera_transform) =
-                                    *paintable_camera;
-                                let world_translation = mesh_transform.transform_point(vertex);
-
-                                let uv = world_to_viewport_uv(
-                                    paintable_camera,
-                                    paintable_camera_transform,
-                                    world_translation,
-                                )?;
-
-                                let viewport_coords = paintable_camera
-                                    .world_to_viewport(
-                                        paintable_camera_transform,
-                                        world_translation,
-                                    )
-                                    .ok()?;
-
-                                let (play_skies_camera, play_skies_camera_transform) =
-                                    *play_skies_camera;
-                                let play_skies_ray = play_skies_camera
-                                    .viewport_to_world(play_skies_camera_transform, viewport_coords)
-                                    .ok()?;
-
-                                let vertex = play_skies_ray.get_point(
-                                    paint_layer_settings.zero_layer_distance
-                                        * paint_layer_settings
-                                            .layer_distance_collapse_rate
-                                            .powf(**layer_index as f32),
-                                );
-
-                                Some((vertex, uv))
-                            })
-                            .collect::<Option<Vec<_>>>()?;
-
-                        let world_triangle =
-                            Triangle3d::new(vertex_uvs[0].0, vertex_uvs[1].0, vertex_uvs[2].0);
+                    .flat_map(paint_triangle(
+                        &paint_layer_settings,
+                        &layer_index,
+                        mesh_transform,
+                        paintable_camera,
+                        paintable_camera_transform,
+                        play_skies_camera,
+                        play_skies_camera_transform,
+                    ))
+                    .map(|triangle_with_uvs| {
+                        let world_triangle = triangle_with_uvs.triangle;
 
                         let centroid = world_triangle.centroid();
 
@@ -252,9 +282,7 @@ fn paint_meshes(
 
                         let mesh_with_uvs = mesh.with_inserted_attribute(
                             Mesh::ATTRIBUTE_UV_0,
-                            [vertex_uvs[0].1, vertex_uvs[1].1, vertex_uvs[2].1]
-                                .map(Into::<[f32; 2]>::into)
-                                .to_vec(),
+                            triangle_with_uvs.uvs.map(Into::<[f32; 2]>::into).to_vec(),
                         );
 
                         // Note: We don't need to adjust this relative to camera translation
