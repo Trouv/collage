@@ -181,9 +181,38 @@ fn paint_canvas(
     }
 }
 
-struct TriangleWithUvs {
-    triangle: Triangle3d,
-    uvs: [Vec2; 3],
+/// A Triangle and custom UVs that can be converted to a Mesh.
+#[derive(Copy, Clone, PartialEq, Default, Debug)]
+pub struct TriangleWithUvs {
+    /// The Triangle data.
+    pub triangle: Triangle3d,
+    /// The UV data.
+    pub uvs: [Vec2; 3],
+}
+
+impl From<TriangleWithUvs> for Mesh {
+    fn from(TriangleWithUvs { triangle, uvs }: TriangleWithUvs) -> Self {
+        let mesh = Mesh::from(triangle);
+
+        mesh.with_inserted_attribute(
+            Mesh::ATTRIBUTE_UV_0,
+            uvs.map(Into::<[f32; 2]>::into).to_vec(),
+        )
+    }
+}
+
+impl TriangleWithUvs {
+    /// Returns the centroid of the triangle and a new `TriangleWithUvs` whose vertices are
+    /// relative to that centroid.
+    pub fn centered(self) -> (Vec3, TriangleWithUvs) {
+        let centroid = self.triangle.centroid();
+
+        let triangle = Triangle3d {
+            vertices: self.triangle.vertices.map(|vertex| vertex - centroid),
+        };
+
+        (centroid, TriangleWithUvs { triangle, ..self })
+    }
 }
 
 fn triangle_projector_for_mesh_for_universe<'w>(
@@ -272,20 +301,9 @@ fn paint_meshes(
                     .ok()?
                     .flat_map(triangle_projector_for_mesh(mesh_transform))
                     .map(|triangle_with_uvs| {
-                        let world_triangle = triangle_with_uvs.triangle;
-
-                        let centroid = world_triangle.centroid();
-
-                        let centered_triangle = Triangle3d {
-                            vertices: world_triangle.vertices.map(|vertex| vertex - centroid),
-                        };
+                        let (centroid, centered_triangle) = triangle_with_uvs.centered();
 
                         let mesh = Mesh::from(centered_triangle);
-
-                        let mesh_with_uvs = mesh.with_inserted_attribute(
-                            Mesh::ATTRIBUTE_UV_0,
-                            triangle_with_uvs.uvs.map(Into::<[f32; 2]>::into).to_vec(),
-                        );
 
                         // Note: We don't need to adjust this relative to camera translation
                         // since we already calculated it in world-space
@@ -296,7 +314,7 @@ fn paint_meshes(
                             ..StandardMaterial::from((**paint_skies_canvas).clone())
                         };
 
-                        Some(assets_add_and(mesh_with_uvs, move |mesh_handle| {
+                        Some(assets_add_and(mesh, move |mesh_handle| {
                             assets_add_and(material, move |material_handle| {
                                 command_spawn((
                                     Mesh3d(mesh_handle),
