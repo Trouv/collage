@@ -186,52 +186,53 @@ struct TriangleWithUvs {
     uvs: [Vec2; 3],
 }
 
-fn paint_triangle(
-    paint_layer_settings: &PaintLayerSettings,
-    layer_index: &LayerIndex,
-    mesh_transform: &GlobalTransform,
-    paintable_camera: &Camera,
-    paintable_camera_transform: &GlobalTransform,
-    play_skies_camera: &Camera,
-    play_skies_camera_transform: &GlobalTransform,
-) -> impl Fn(Triangle3d) -> Option<TriangleWithUvs> {
-    |triangle| {
-        let vertex_uvs = triangle
-            .vertices
-            .into_iter()
-            .map(|vertex| {
-                let world_translation = mesh_transform.transform_point(vertex);
+fn triangle_projector_for_mesh_for_universe<'w>(
+    paint_layer_settings: &'w PaintLayerSettings,
+    layer_index: &'w LayerIndex,
+    paintable_camera: &'w Camera,
+    paintable_camera_transform: &'w GlobalTransform,
+    play_skies_camera: &'w Camera,
+    play_skies_camera_transform: &'w GlobalTransform,
+) -> impl Fn(&'w GlobalTransform) -> Box<dyn Fn(Triangle3d) -> Option<TriangleWithUvs> + 'w> + 'w {
+    move |mesh_transform| {
+        Box::new(|triangle| {
+            let vertex_uvs = triangle
+                .vertices
+                .into_iter()
+                .map(|vertex| {
+                    let world_translation = mesh_transform.transform_point(vertex);
 
-                let uv = world_to_viewport_uv(
-                    paintable_camera,
-                    paintable_camera_transform,
-                    world_translation,
-                )?;
+                    let uv = world_to_viewport_uv(
+                        paintable_camera,
+                        paintable_camera_transform,
+                        world_translation,
+                    )?;
 
-                let viewport_coords = paintable_camera
-                    .world_to_viewport(paintable_camera_transform, world_translation)
-                    .ok()?;
+                    let viewport_coords = paintable_camera
+                        .world_to_viewport(paintable_camera_transform, world_translation)
+                        .ok()?;
 
-                let play_skies_ray = play_skies_camera
-                    .viewport_to_world(play_skies_camera_transform, viewport_coords)
-                    .ok()?;
+                    let play_skies_ray = play_skies_camera
+                        .viewport_to_world(play_skies_camera_transform, viewport_coords)
+                        .ok()?;
 
-                let vertex = play_skies_ray.get_point(
-                    paint_layer_settings.zero_layer_distance
-                        * paint_layer_settings
-                            .layer_distance_collapse_rate
-                            .powf(**layer_index as f32),
-                );
+                    let vertex = play_skies_ray.get_point(
+                        paint_layer_settings.zero_layer_distance
+                            * paint_layer_settings
+                                .layer_distance_collapse_rate
+                                .powf(**layer_index as f32),
+                    );
 
-                Some((vertex, uv))
+                    Some((vertex, uv))
+                })
+                .collect::<Option<Vec<_>>>()?;
+
+            let world_triangle = Triangle3d::new(vertex_uvs[0].0, vertex_uvs[1].0, vertex_uvs[2].0);
+
+            Some(TriangleWithUvs {
+                triangle: world_triangle,
+                uvs: [vertex_uvs[0].1, vertex_uvs[1].1, vertex_uvs[2].1],
             })
-            .collect::<Option<Vec<_>>>()?;
-
-        let world_triangle = Triangle3d::new(vertex_uvs[0].0, vertex_uvs[1].0, vertex_uvs[2].0);
-
-        Some(TriangleWithUvs {
-            triangle: world_triangle,
-            uvs: [vertex_uvs[0].1, vertex_uvs[1].1, vertex_uvs[2].1],
         })
     }
 }
@@ -246,29 +247,30 @@ fn paint_meshes(
     paint_layer_settings: Res<PaintLayerSettings>,
     paint_skies_canvas: Res<PaintSkiesCanvas>,
 ) -> (Vec<impl Effect + use<>>, ResSet<LayerIndex>) {
+    let (paintable_camera, paintable_camera_transform) = *paintable_camera;
+
+    let (play_skies_camera, play_skies_camera_transform) = *play_skies_camera;
+
+    let triangle_projector_for_mesh = triangle_projector_for_mesh_for_universe(
+        &paint_layer_settings,
+        &layer_index,
+        paintable_camera,
+        paintable_camera_transform,
+        play_skies_camera,
+        play_skies_camera_transform,
+    );
+
     (
         paintable_meshes
             .iter()
             .flat_map(|(mesh, mesh_transform)| {
                 let mesh = mesh_assets.get(mesh)?;
 
-                let (paintable_camera, paintable_camera_transform) = *paintable_camera;
-
-                let (play_skies_camera, play_skies_camera_transform) = *play_skies_camera;
-
                 let spawn_commands = mesh
                     .clone()
                     .triangles()
                     .ok()?
-                    .flat_map(paint_triangle(
-                        &paint_layer_settings,
-                        &layer_index,
-                        mesh_transform,
-                        paintable_camera,
-                        paintable_camera_transform,
-                        play_skies_camera,
-                        play_skies_camera_transform,
-                    ))
+                    .flat_map(triangle_projector_for_mesh(mesh_transform))
                     .map(|triangle_with_uvs| {
                         let world_triangle = triangle_with_uvs.triangle;
 
