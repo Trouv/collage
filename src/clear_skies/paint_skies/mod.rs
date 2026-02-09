@@ -10,3 +10,5 @@ mod control_spherical_coords;
 
 mod paint_meshes;
 pub use paint_meshes::Paintable;
+
+mod triangle_with_uvs;
