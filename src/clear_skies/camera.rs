@@ -103,7 +103,7 @@ pub enum PaintSkiesAction {
 pub fn spawn_paint_skies_camera(render_target: Res<ClearSkiesRenderTarget>) -> impl Effect + use<> {
     let input_map = InputMap::default()
         .with(PaintSkiesAction::Paint, GamepadButton::RightTrigger)
-        .with(PaintSkiesAction::Paint, MouseButton::Left)
+        .with(PaintSkiesAction::Paint, KeyCode::Space)
         .with_dual_axis(
             PaintSkiesAction::Rotate,
             GamepadStick::LEFT.with_deadzone_symmetric(0.1),
