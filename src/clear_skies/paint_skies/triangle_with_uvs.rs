@@ -1,3 +1,4 @@
+use bevy::mesh::{Indices, MeshMergeError};
 use bevy::prelude::*;
 
 /// A Triangle and custom UVs that can be converted to a Mesh.
@@ -78,5 +79,27 @@ impl OctahedronWithUvs {
         };
 
         (centroid, centered)
+    }
+}
+
+impl TryFrom<OctahedronWithUvs> for Mesh {
+    type Error = MeshMergeError;
+
+    fn try_from(
+        OctahedronWithUvs {
+            near_face,
+            far_face,
+        }: OctahedronWithUvs,
+    ) -> Result<Self, Self::Error> {
+        let mesh = {
+            let mut near_mesh = Mesh::from(near_face);
+            let far_mesh = Mesh::from(far_face);
+            near_mesh.merge(&far_mesh)?;
+            near_mesh
+        };
+
+        Ok(mesh.with_inserted_indices(Indices::U32(vec![
+            0, 1, 3, 1, 2, 4, 2, 0, 5, 3, 4, 1, 4, 5, 2, 5, 3, 0,
+        ])))
     }
 }
