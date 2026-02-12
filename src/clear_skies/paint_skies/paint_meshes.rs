@@ -233,6 +233,24 @@ fn triangle_projector_for_mesh_for_universe<'w>(
     }
 }
 
+/// Component for meshes that are created by painting the paintable meshes.
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Component)]
+#[relationship(relationship_target = PaintedMeshes)]
+pub struct PaintedMesh {
+    /// The entity whose mesh was used to paint this mesh.
+    #[relationship]
+    pub painted_from: Entity,
+    /// The triangle of the original mesh that was used to paint this mesh.
+    pub triangle_index: usize,
+    /// The layer that this mesh was painted on.
+    pub paint_layer: LayerIndex,
+}
+
+/// The meshes that were painted from this entity's mesh.
+#[derive(Clone, PartialEq, Eq, Debug, Deref, Component)]
+#[relationship_target(relationship = PaintedMesh)]
+pub struct PaintedMeshes(Vec<Entity>);
+
 fn paint_meshes(
     _: On<ScreenshotCaptured>,
     paintable_meshes: Query<(&Mesh3d, &GlobalTransform), With<Paintable>>,
