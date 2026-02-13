@@ -253,7 +253,7 @@ pub struct PaintedMeshes(Vec<Entity>);
 
 fn paint_meshes(
     _: On<ScreenshotCaptured>,
-    paintable_meshes: Query<(&Mesh3d, &GlobalTransform), With<Paintable>>,
+    paintable_meshes: Query<(Entity, &Mesh3d, &GlobalTransform), With<Paintable>>,
     mesh_assets: Res<Assets<Mesh>>,
     paintable_camera: Single<(&Camera, &GlobalTransform), With<Paintable>>,
     play_skies_camera: Single<(&Camera, &GlobalTransform), With<PlaySkiesCamera>>,
@@ -277,15 +277,20 @@ fn paint_meshes(
     (
         paintable_meshes
             .iter()
-            .flat_map(|(mesh, mesh_transform)| {
+            .flat_map(|(paintable_mesh_entity, mesh, mesh_transform)| {
                 let mesh = mesh_assets.get(mesh)?;
+
+                let triangle_projector = triangle_projector_for_mesh(mesh_transform);
 
                 let spawn_commands = mesh
                     .clone()
                     .triangles()
                     .ok()?
-                    .flat_map(triangle_projector_for_mesh(mesh_transform))
-                    .map(|triangle_with_uvs| {
+                    .enumerate()
+                    .flat_map(|(triangle_index, triangle)| {
+                        Some((triangle_index, triangle_projector(triangle)?))
+                    })
+                    .map(|(triangle_index, triangle_with_uvs)| {
                         let (centroid, centered_triangle) = triangle_with_uvs.centered();
 
                         let mesh = Mesh::from(centered_triangle);
@@ -299,6 +304,8 @@ fn paint_meshes(
                             ..StandardMaterial::from((**paint_skies_canvas).clone())
                         };
 
+                        let paint_layer = layer_index.clone();
+
                         Some(assets_add_and(mesh, move |mesh_handle| {
                             assets_add_and(material, move |material_handle| {
                                 command_spawn((
@@ -306,6 +313,11 @@ fn paint_meshes(
                                     MeshMaterial3d(material_handle),
                                     transform,
                                     PAINTED_LAYER,
+                                    PaintedMesh {
+                                        painted_from: paintable_mesh_entity,
+                                        triangle_index,
+                                        paint_layer,
+                                    },
                                 ))
                             })
                         }))
