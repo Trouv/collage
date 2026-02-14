@@ -12,3 +12,5 @@ mod paint_meshes;
 pub use paint_meshes::Paintable;
 
 mod triangle_with_uvs;
+
+mod paint_layer_history;
