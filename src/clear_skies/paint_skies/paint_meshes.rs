@@ -29,6 +29,7 @@ impl Plugin for PaintMeshesPlugin {
         app.init_resource::<PaintMeshesTimer>()
             .init_resource::<PaintLayerSettings>()
             .init_resource::<LayerIndex>()
+            .add_message::<ReadyToPaint>()
             .add_systems(
                 OnEnter(ClearSkiesState::Setup),
                 create_paint_skies_canvas.pipe(affect),
@@ -162,6 +163,10 @@ fn save_screenshot_to_canvas(
     assets_insert((**canvas).clone(), screenshot.image.clone())
 }
 
+/// Message that is sent when the screenshot for painting mesh UVs is ready.
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Default, Message)]
+pub struct ReadyToPaint;
+
 fn paint_canvas(
     timer: Res<PaintMeshesTimer>,
     render_target: Res<ClearSkiesRenderTarget>,
@@ -169,6 +174,7 @@ fn paint_canvas(
     if timer.just_finished() {
         let effect = command_spawn_and(Screenshot::image((**render_target).clone()), |entity| {
             (
+                message_write(ReadyToPaint),
                 command_spawn(
                     Observer::new(save_screenshot_to_canvas.pipe(affect)).with_entity(entity),
                 ),
