@@ -174,7 +174,9 @@ fn paint_canvas(
     if timer.just_finished() {
         let effect = command_spawn_and(Screenshot::image((**render_target).clone()), |entity| {
             (
-                message_write(ReadyToPaint),
+                command_spawn(Observer::new(
+                    (|_: On<ScreenshotCaptured>| message_write(ReadyToPaint)).pipe(affect),
+                )),
                 command_spawn(
                     Observer::new(save_screenshot_to_canvas.pipe(affect)).with_entity(entity),
                 ),
