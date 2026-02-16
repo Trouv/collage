@@ -69,7 +69,7 @@ impl Default for PaintMeshesTimer {
 fn tick_paint_meshes_timer(
     time: Res<Time>,
     paint: Single<&ActionState<PaintSkiesAction>>,
-) -> ResSetWith<impl FnOnce(PaintMeshesTimer) -> PaintMeshesTimer + use<>, PaintMeshesTimer> {
+) -> ResSetWith<PaintMeshesTimer> {
     let delta_time = time.delta();
 
     let painting = paint.pressed(&PaintSkiesAction::Paint);
