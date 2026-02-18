@@ -16,8 +16,11 @@ pub struct GltfAssetNotStrongPath;
 /// A dummy scene for prototyping..
 pub fn spawn_scene(
     assets: Res<ClearSkiesAssetCollection>,
-) -> Result<impl Effect + use<>, GltfAssetNotStrongPath> {
-    Ok((asset_server_load_and(
+) -> Result<
+    AssetServerLoadAnd<Scene, Vec<CommandSpawn<(SceneRoot, Transform, Paintable)>>>,
+    GltfAssetNotStrongPath,
+> {
+    Ok(asset_server_load_and(
         GltfAssetLabel::Scene(0).from_asset(assets.cube.path().ok_or(GltfAssetNotStrongPath)?),
         |handle| {
             (0..2)
@@ -31,7 +34,7 @@ pub fn spawn_scene(
                 })
                 .collect::<Vec<_>>()
         },
-    ),))
+    ))
 }
 
 /// Asset collection for the clear skies scenes.
