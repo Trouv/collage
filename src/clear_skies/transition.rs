@@ -17,7 +17,7 @@ pub struct GltfAssetNotStrongPath;
 pub fn spawn_scene(
     assets: Res<ClearSkiesAssetCollection>,
 ) -> Result<
-    AssetServerLoadAnd<Scene, Vec<CommandSpawn<(SceneRoot, Transform, Paintable)>>>,
+    AssetServerLoadAnd<'static, Scene, Vec<CommandSpawn<(SceneRoot, Transform, Paintable)>>>,
     GltfAssetNotStrongPath,
 > {
     Ok(asset_server_load_and(
