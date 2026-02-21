@@ -14,9 +14,10 @@ pub struct LookAtSphericalCoords {
     pub phi: f32,
 }
 
-pub fn look_at_spherical_coords() -> impl Effect + use<> {
-    components_set_with_query_data::<_, _, &LookAtSphericalCoords>(
-        |(transform,): (Transform,), coords| {
+pub fn look_at_spherical_coords()
+-> ComponentsSetWithQueryData<(Transform,), &'static LookAtSphericalCoords> {
+    components_set_with_query_data(
+        |(transform,): (Transform,), coords: &LookAtSphericalCoords| {
             let theta_unit_circle_coords = Vec2::new(coords.theta.cos(), coords.theta.sin());
             let phi_unit_circle_coords = Vec2::new(coords.phi.cos(), coords.phi.sin());
 
