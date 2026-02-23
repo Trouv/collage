@@ -32,7 +32,7 @@ impl<A: Actionlike + TypePath + GetTypeRegistration> Plugin for SwitchGamepadsPl
 
 pub fn switch_gamepads<A: Actionlike>(
     mut gamepad_events: MessageReader<GamepadEvent>,
-) -> Vec<impl Effect + use<A>> {
+) -> Vec<ComponentsSetWith<(InputMap<A>,)>> {
     gamepad_events
         .read()
         .map(|event| {
