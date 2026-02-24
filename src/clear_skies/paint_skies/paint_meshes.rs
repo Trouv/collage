@@ -13,13 +13,7 @@ use crate::clear_skies::camera::{ClearSkiesRenderTarget, ClearSkiesResolution, P
 use crate::clear_skies::paint_skies::triangle_with_uvs::TriangleWithUvs;
 use crate::clear_skies::play_skies::PlaySkiesCamera;
 use crate::clear_skies::render_layers::{PAINTABLE_LAYER, PAINTED_LAYER};
-use crate::effects::{
-    AssetsInsert,
-    EntityCommandInsertRecursive,
-    assets_add_and,
-    assets_insert,
-    entity_command_insert_recursive,
-};
+use crate::effects::{AssetsInsert, assets_add_and, assets_insert};
 
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, Hash, Reflect)]
 pub struct PaintMeshesPlugin;

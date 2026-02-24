@@ -4,59 +4,6 @@ use bevy::asset::InvalidGenerationError;
 use bevy::prelude::*;
 use bevy_pipe_affect::prelude::*;
 
-/// [`Effect`] that inserts a component recursively on relationship targets.
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Reflect)]
-pub struct EntityCommandInsertRecursive<RT, B>
-where
-    RT: RelationshipTarget,
-    B: Bundle + Clone,
-{
-    pub entity: Entity,
-    pub bundle: B,
-    _phantom: PhantomData<RT>,
-}
-
-impl<RT, B> EntityCommandInsertRecursive<RT, B>
-where
-    B: Bundle + Clone,
-    RT: RelationshipTarget,
-{
-    /// Construct a new [`EntityCommandInsertRecursive`].
-    fn new(entity: Entity, bundle: B) -> Self {
-        Self {
-            entity,
-            bundle,
-            _phantom: PhantomData,
-        }
-    }
-}
-
-/// Construct a new [`EnttiyCommandInsertRecursive`] [`Effect`].
-pub fn entity_command_insert_recursive<RT, B>(
-    entity: Entity,
-    bundle: B,
-) -> EntityCommandInsertRecursive<RT, B>
-where
-    B: Bundle + Clone,
-    RT: RelationshipTarget,
-{
-    EntityCommandInsertRecursive::new(entity, bundle)
-}
-
-impl<RT, B> Effect for EntityCommandInsertRecursive<RT, B>
-where
-    RT: RelationshipTarget,
-    B: Bundle + Clone,
-{
-    type MutParam = Commands<'static, 'static>;
-
-    fn affect(self, param: &mut <Self::MutParam as bevy::ecs::system::SystemParam>::Item<'_, '_>) {
-        param
-            .entity(self.entity)
-            .insert_recursive::<RT>(self.bundle);
-    }
-}
-
 /// `Effect` that adds an asset to an `Assets` resource and can produce more effects with the
 /// `Handle`.
 #[derive(Default, Debug, PartialEq, Eq, Copy, Clone, Hash, Reflect)]
