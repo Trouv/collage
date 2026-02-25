@@ -146,7 +146,7 @@ pub struct ClearSkiesViewport;
 pub fn spawn_viewport(
     resolution: Res<ClearSkiesResolution>,
     texture: Res<ClearSkiesRenderTarget>,
-) -> impl Effect + use<> {
+) -> CommandSpawn<(ImageNode, ClearSkiesViewport, Node, ZIndex)> {
     command_spawn((
         ImageNode::new((**texture).clone()),
         ClearSkiesViewport,
