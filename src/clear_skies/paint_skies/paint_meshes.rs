@@ -10,6 +10,7 @@ use leafwing_input_manager::prelude::*;
 
 use crate::clear_skies::ClearSkiesState;
 use crate::clear_skies::camera::{ClearSkiesRenderTarget, ClearSkiesResolution, PaintSkiesAction};
+use crate::clear_skies::paint_skies::paint_layer_history::PaintLayerHistoryPlugin;
 use crate::clear_skies::paint_skies::triangle_with_uvs::TriangleWithUvs;
 use crate::clear_skies::play_skies::PlaySkiesCamera;
 use crate::clear_skies::render_layers::{PAINTABLE_LAYER, PAINTED_LAYER};
@@ -24,6 +25,7 @@ impl Plugin for PaintMeshesPlugin {
             .init_resource::<PaintLayerSettings>()
             .init_resource::<LayerIndex>()
             .add_message::<ReadyToPaint>()
+            .add_plugins(PaintLayerHistoryPlugin::<Transform>::default())
             .add_systems(
                 OnEnter(ClearSkiesState::Setup),
                 create_paint_skies_canvas.pipe(affect),
