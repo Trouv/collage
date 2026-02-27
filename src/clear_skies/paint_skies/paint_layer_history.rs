@@ -36,6 +36,13 @@ impl<C> PaintableHistory<C> {
             history: vec![],
         }
     }
+
+    pub fn get(&self, LayerIndex(absolute_index): LayerIndex) -> Option<&C> {
+        let relative_index = absolute_index.checked_sub(self.initial_layer.0)?;
+        let relative_index_usize: usize = relative_index.try_into().ok()?;
+
+        self.history.get(relative_index_usize)
+    }
 }
 
 fn record_history<C>() -> ComponentsSetWithQueryData<(PaintableHistory<C>,), &'static C>
