@@ -10,7 +10,10 @@ use leafwing_input_manager::prelude::*;
 
 use crate::clear_skies::ClearSkiesState;
 use crate::clear_skies::camera::{ClearSkiesRenderTarget, ClearSkiesResolution, PaintSkiesAction};
-use crate::clear_skies::paint_skies::paint_layer_history::PaintLayerHistoryPlugin;
+use crate::clear_skies::paint_skies::paint_layer_history::{
+    PaintLayerHistoryPlugin,
+    PaintableHistory,
+};
 use crate::clear_skies::paint_skies::triangle_with_uvs::TriangleWithUvs;
 use crate::clear_skies::play_skies::PlaySkiesCamera;
 use crate::clear_skies::render_layers::{PAINTABLE_LAYER, PAINTED_LAYER};
@@ -44,7 +47,8 @@ impl Plugin for PaintMeshesPlugin {
                 )
                     .chain()
                     .run_if(in_state(ClearSkiesState::PaintSkies)),
-            );
+            )
+            .add_systems(Update, track_transform_for_paintable_meshes.pipe(affect));
     }
 }
 
@@ -91,6 +95,21 @@ fn propagate_paintable_on_scenes(
     } else {
         None
     }
+}
+
+fn track_transform_for_paintable_meshes(
+    meshes: Query<Entity, (With<Mesh3d>, Added<Paintable>)>,
+    layer_index: Res<LayerIndex>,
+) -> Vec<EntityCommandInsert<PaintableHistory<Transform>>> {
+    meshes
+        .into_iter()
+        .map(|entity| {
+            entity_command_insert(
+                entity,
+                PaintableHistory::new_with_initial_layer(layer_index.clone()),
+            )
+        })
+        .collect()
 }
 
 /// Index for the paint mesh layer.
