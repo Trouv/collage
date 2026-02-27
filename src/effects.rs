@@ -1,5 +1,3 @@
-use std::marker::PhantomData;
-
 use bevy::asset::InvalidGenerationError;
 use bevy::prelude::*;
 use bevy_pipe_affect::prelude::*;
