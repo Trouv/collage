@@ -116,7 +116,7 @@ fn track_transform_for_paintable_meshes(
 #[derive(
     Default, Debug, PartialEq, Eq, Copy, Clone, Hash, Reflect, Deref, DerefMut, Resource, Component,
 )]
-pub struct LayerIndex(u32);
+pub struct LayerIndex(pub u32);
 
 /// Settings for the logic of painting layers.
 #[derive(Debug, PartialEq, Copy, Clone, Reflect, Resource)]
