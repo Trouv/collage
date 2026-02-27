@@ -30,7 +30,7 @@ pub struct PaintableHistory<C> {
 }
 
 impl<C> PaintableHistory<C> {
-    fn new_with_initial_layer(initial_layer: LayerIndex) -> Self {
+    pub fn new_with_initial_layer(initial_layer: LayerIndex) -> Self {
         PaintableHistory {
             initial_layer,
             history: vec![],
