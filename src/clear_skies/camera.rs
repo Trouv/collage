@@ -8,7 +8,12 @@ use bevy_pipe_affect::prelude::{command_insert_resource, *};
 use leafwing_input_manager::prelude::*;
 
 use crate::clear_skies::ClearSkiesState;
-use crate::clear_skies::paint_skies::{LookAtSphericalCoords, Paintable, SphericalCoordsBounds};
+use crate::clear_skies::paint_skies::{
+    LookAtSphericalCoords,
+    Paintable,
+    PaintableHistory,
+    SphericalCoordsBounds,
+};
 use crate::effects::assets_add_and;
 
 /// Plugin defining camera setup and logic for clear skies.
@@ -123,6 +128,7 @@ pub fn spawn_paint_skies_camera(render_target: Res<ClearSkiesRenderTarget>) -> i
         },
         LookAtSphericalCoords::default(),
         Paintable,
+        PaintableHistory::<Transform>::default(),
         Camera {
             order: 2,
             clear_color: ClearColorConfig::None,
