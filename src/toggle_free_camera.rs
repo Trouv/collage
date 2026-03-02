@@ -5,8 +5,6 @@ use bevy::prelude::*;
 use bevy::render::render_resource::TextureFormat;
 use bevy_pipe_affect::prelude::*;
 
-use crate::effects::{AssetsAddAnd, assets_add_and};
-
 /// Debug plugin that spawns or despawns a flycam.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct ToggleFreeCameraPlugin {
@@ -41,18 +39,7 @@ struct ToggleFreeCamera;
 
 #[derive(Effect)]
 enum SpawnOrDespawnFreeCamera {
-    Spawn(
-        AssetsAddAnd<
-            Image,
-            CommandSpawn<(ToggleFreeCamera, RenderLayers, RenderTarget)>,
-            Box<
-                dyn Fn(
-                    Handle<Image>,
-                )
-                    -> CommandSpawn<(ToggleFreeCamera, RenderLayers, RenderTarget)>,
-            >,
-        >,
-    ),
+    Spawn(AssetAddAnd<Image, CommandSpawn<(ToggleFreeCamera, RenderLayers, RenderTarget)>>),
     Despawn(EntityCommandDespawn),
     Wait,
 }
@@ -70,20 +57,17 @@ fn spawn_or_despawn_free_cam(
                     let image =
                         Image::new_target_texture(1, 1, TextureFormat::Bgra8UnormSrgb, None);
 
-                    SpawnOrDespawnFreeCamera::Spawn(assets_add_and(
-                        image,
-                        Box::new(move |handle| {
-                            command_spawn((
-                                ToggleFreeCamera,
-                                RenderLayers::from_layers(
-                                    (0..=settings.num_render_layers)
-                                        .collect::<Vec<_>>()
-                                        .as_slice(),
-                                ),
-                                RenderTarget::from(handle),
-                            ))
-                        }),
-                    ))
+                    SpawnOrDespawnFreeCamera::Spawn(asset_add_and(image, move |handle| {
+                        command_spawn((
+                            ToggleFreeCamera,
+                            RenderLayers::from_layers(
+                                (0..=settings.num_render_layers)
+                                    .collect::<Vec<_>>()
+                                    .as_slice(),
+                            ),
+                            RenderTarget::from(handle),
+                        ))
+                    }))
                 }
                 Some(entity) => SpawnOrDespawnFreeCamera::Despawn(entity_command_despawn(*entity)),
             }

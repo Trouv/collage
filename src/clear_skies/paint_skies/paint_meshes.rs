@@ -17,7 +17,7 @@ use crate::clear_skies::paint_skies::paint_layer_history::{
 use crate::clear_skies::paint_skies::triangle_with_uvs::TriangleWithUvs;
 use crate::clear_skies::play_skies::PlaySkiesCamera;
 use crate::clear_skies::render_layers::{PAINTABLE_LAYER, PAINTED_LAYER};
-use crate::effects::{AssetsInsert, assets_add_and, assets_insert};
+use crate::effects::{AssetsInsert, assets_insert};
 
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, Hash, Reflect)]
 pub struct PaintMeshesPlugin;
@@ -147,7 +147,7 @@ pub fn create_paint_skies_canvas(resolution: Res<ClearSkiesResolution>) -> impl 
         None,
     );
 
-    assets_add_and(image, |handle| {
+    asset_add_and(image, |handle| {
         command_insert_resource(PaintSkiesCanvas(handle))
     })
 }
@@ -329,8 +329,8 @@ fn paint_meshes(
 
                         let paint_layer = layer_index.clone();
 
-                        Some(assets_add_and(mesh, move |mesh_handle| {
-                            assets_add_and(material, move |material_handle| {
+                        Some(asset_add_and(mesh, move |mesh_handle| {
+                            asset_add_and(material, move |material_handle| {
                                 command_spawn((
                                     Mesh3d(mesh_handle),
                                     MeshMaterial3d(material_handle),

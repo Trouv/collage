@@ -14,7 +14,6 @@ use crate::clear_skies::paint_skies::{
     PaintableHistory,
     SphericalCoordsBounds,
 };
-use crate::effects::assets_add_and;
 
 /// Plugin defining camera setup and logic for clear skies.
 #[derive(Default, Debug, PartialEq, Eq, Copy, Clone, Hash, Reflect)]
@@ -88,7 +87,7 @@ pub fn create_clear_skies_render_target(
         | TextureUsages::TEXTURE_BINDING
         | TextureUsages::RENDER_ATTACHMENT;
 
-    assets_add_and(image, |handle| {
+    asset_add_and(image, |handle| {
         command_insert_resource(ClearSkiesRenderTarget(handle))
     })
 }
