@@ -104,7 +104,15 @@ pub enum PaintSkiesAction {
 }
 
 /// Defines the paint skies camera.
-pub fn spawn_paint_skies_camera(render_target: Res<ClearSkiesRenderTarget>) -> impl Effect + use<> {
+pub fn spawn_paint_skies_camera(
+    render_target: Res<ClearSkiesRenderTarget>,
+) -> CommandSpawn<(
+    InputMap<PaintSkiesAction>,
+    PaintSkiesCamera,
+    SphericalCoordsBounds,
+    Camera,
+    RenderTarget,
+)> {
     let input_map = InputMap::default()
         .with(PaintSkiesAction::Paint, GamepadButton::RightTrigger)
         .with(PaintSkiesAction::Paint, KeyCode::Space)
@@ -119,28 +127,23 @@ pub fn spawn_paint_skies_camera(render_target: Res<ClearSkiesRenderTarget>) -> i
 
     command_spawn((
         input_map,
-        Camera3d::default(),
         PaintSkiesCamera,
         SphericalCoordsBounds {
             max_phi: 3.0 * PI / 8.0,
             min_phi: -3.0 * PI / 8.0,
         },
-        LookAtSphericalCoords::default(),
-        Paintable,
-        PaintableHistory::<Transform>::default(),
         Camera {
             order: 2,
             clear_color: ClearColorConfig::None,
             ..default()
         },
         RenderTarget::from((**render_target).clone()),
-        CameraMainTextureUsages::default(),
     ))
 }
 
 /// The camera controlled in the paint skies state whose subjects get painted.
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, Hash, Reflect, Component)]
-#[require(Name = "PaintSkiesCamera")]
+#[require(Name = "PaintSkiesCamera", Camera3d, LookAtSphericalCoords, Paintable, PaintableHistory<Transform>)]
 pub struct PaintSkiesCamera;
 
 /// Marker component for the viewport UI node displaying the [`ClearSkiesRenderTarget`].
