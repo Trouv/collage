@@ -72,7 +72,7 @@ pub struct CreateClearSkiesRenderTarget;
 /// System that creates [`ClearSkiesRenderTarget`].
 pub fn create_clear_skies_render_target(
     resolution: Res<ClearSkiesResolution>,
-) -> impl Effect + use<> {
+) -> AssetAddAnd<Image, CommandInsertResource<ClearSkiesRenderTarget>> {
     let mut image = Image::new_target_texture(
         resolution.x,
         resolution.y,
