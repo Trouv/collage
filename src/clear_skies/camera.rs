@@ -173,7 +173,7 @@ pub fn spawn_viewport(
 pub fn letterbox_or_pillarbox_viewport(
     window: Single<&Window>,
     resolution: Res<ClearSkiesResolution>,
-) -> impl Effect + use<> {
+) -> ComponentsSetFilteredWith<(Node,), With<ClearSkiesViewport>> {
     let window_aspect_ratio = window.width() / window.height();
     let target_aspect_ratio = resolution.x as f32 / resolution.y as f32;
 
