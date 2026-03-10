@@ -139,7 +139,9 @@ impl Default for PaintLayerSettings {
 pub struct PaintSkiesCanvas(Handle<Image>);
 
 /// System that creates [`ClearSkiesRenderTarget`].
-pub fn create_paint_skies_canvas(resolution: Res<ClearSkiesResolution>) -> impl Effect + use<> {
+pub fn create_paint_skies_canvas(
+    resolution: Res<ClearSkiesResolution>,
+) -> AssetAddAnd<Image, CommandInsertResource<PaintSkiesCanvas>> {
     let image = Image::new_target_texture(
         resolution.x,
         resolution.y,
