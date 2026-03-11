@@ -187,7 +187,16 @@ pub struct ReadyToPaint;
 fn paint_canvas(
     timer: Res<PaintMeshesTimer>,
     render_target: Res<ClearSkiesRenderTarget>,
-) -> Option<impl Effect + use<>> {
+) -> Option<
+    CommandSpawnAnd<
+        Screenshot,
+        (
+            CommandSpawn<Observer>,
+            CommandSpawn<Observer>,
+            CommandSpawn<Observer>,
+        ),
+    >,
+> {
     if timer.just_finished() {
         let effect = command_spawn_and(Screenshot::image((**render_target).clone()), |entity| {
             (
