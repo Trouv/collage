@@ -129,7 +129,7 @@ impl Default for PaintLayerSettings {
     fn default() -> Self {
         PaintLayerSettings {
             zero_layer_distance: 1000.0,
-            layer_distance_collapse_rate: 0.99,
+            layer_distance_collapse_rate: 0.98,
         }
     }
 }
