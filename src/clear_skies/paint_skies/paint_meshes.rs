@@ -287,15 +287,35 @@ pub struct PaintedMeshes(Vec<Entity>);
 
 fn paint_meshes(
     _: On<ScreenshotCaptured>,
-    paintable_meshes: Query<(Entity, &Mesh3d, &GlobalTransform), With<Paintable>>,
+    paintable_meshes: Query<
+        (
+            Entity,
+            &Mesh3d,
+            &GlobalTransform,
+            &PaintableHistory<GlobalTransform>,
+        ),
+        With<Paintable>,
+    >,
     mesh_assets: Res<Assets<Mesh>>,
-    paintable_camera: Single<(&Camera, &GlobalTransform), With<Paintable>>,
+    paintable_camera: Single<
+        (
+            &Camera,
+            &GlobalTransform,
+            &PaintableHistory<GlobalTransform>,
+        ),
+        With<Paintable>,
+    >,
     play_skies_camera: Single<(&Camera, &GlobalTransform), With<PlaySkiesCamera>>,
     layer_index: Res<LayerIndex>,
     paint_layer_settings: Res<PaintLayerSettings>,
     paint_skies_canvas: Res<PaintSkiesCanvas>,
 ) -> (Vec<impl Effect + use<>>, ResSet<LayerIndex>) {
-    let (paintable_camera, paintable_camera_transform) = *paintable_camera;
+    let (paintable_camera, paintable_camera_transform, paintable_camera_transform_history) =
+        *paintable_camera;
+    let previous_layer_index = LayerIndex(layer_index.saturating_sub(1));
+    let previous_paintable_camera_transform = paintable_camera_transform_history
+        .get(previous_layer_index)
+        .unwrap_or(paintable_camera_transform);
 
     let (play_skies_camera, play_skies_camera_transform) = *play_skies_camera;
 
@@ -307,59 +327,86 @@ fn paint_meshes(
         play_skies_camera,
         play_skies_camera_transform,
     );
+    let previous_triangle_projector_for_mesh = triangle_projector_for_mesh_for_universe(
+        &paint_layer_settings,
+        &previous_layer_index,
+        paintable_camera,
+        previous_paintable_camera_transform,
+        play_skies_camera,
+        play_skies_camera_transform,
+    );
 
     (
         paintable_meshes
             .iter()
-            .flat_map(|(paintable_mesh_entity, mesh, mesh_transform)| {
-                let mesh = mesh_assets.get(mesh)?;
+            .flat_map(
+                |(paintable_mesh_entity, mesh, mesh_transform, mesh_transform_history)| {
+                    let mesh = mesh_assets.get(mesh)?;
 
-                let triangle_projector = triangle_projector_for_mesh(mesh_transform);
+                    let triangle_projector = triangle_projector_for_mesh(mesh_transform);
 
-                let spawn_commands = mesh
-                    .clone()
-                    .triangles()
-                    .ok()?
-                    .enumerate()
-                    .flat_map(|(triangle_index, triangle)| {
-                        Some((triangle_index, triangle_projector(triangle)?))
-                    })
-                    .map(|(triangle_index, triangle_with_uvs)| {
-                        let (centroid, centered_triangle) = triangle_with_uvs.centered();
+                    let previous_mesh_transform =
+                        mesh_transform_history.get(previous_layer_index)?;
 
-                        let mesh = Mesh::from(centered_triangle);
+                    let previous_triangle_projector =
+                        previous_triangle_projector_for_mesh(previous_mesh_transform);
 
-                        // Note: We don't need to adjust this relative to camera translation
-                        // since we already calculated it in world-space
-                        let transform = Transform::from_translation(centroid);
+                    let spawn_commands = mesh
+                        .clone()
+                        .triangles()
+                        .ok()?
+                        .enumerate()
+                        .flat_map(|(triangle_index, triangle)| {
+                            Some((
+                                triangle_index,
+                                triangle_projector(triangle)?,
+                                previous_triangle_projector(triangle)?,
+                            ))
+                        })
+                        .map(
+                            |(triangle_index, triangle_with_uvs, previous_triangle_with_uvs)| {
+                                let octahedron_with_uvs = OctahedronWithUvs {
+                                    near_face: triangle_with_uvs,
+                                    far_face: previous_triangle_with_uvs,
+                                };
+                                let (centroid, centered_octahedron) =
+                                    octahedron_with_uvs.centered();
 
-                        let material = StandardMaterial {
-                            unlit: true,
-                            ..StandardMaterial::from((**paint_skies_canvas).clone())
-                        };
+                                let mesh = Mesh::from(centered_octahedron);
 
-                        let paint_layer = layer_index.clone();
+                                // Note: We don't need to adjust this relative to camera translation
+                                // since we already calculated it in world-space
+                                let transform = Transform::from_translation(centroid);
 
-                        Some(asset_add_and(mesh, move |mesh_handle| {
-                            asset_add_and(material, move |material_handle| {
-                                command_spawn((
-                                    Mesh3d(mesh_handle),
-                                    MeshMaterial3d(material_handle),
-                                    transform,
-                                    PAINTED_LAYER,
-                                    PaintedMesh {
-                                        painted_from: paintable_mesh_entity,
-                                        triangle_index,
-                                        paint_layer,
-                                    },
-                                ))
-                            })
-                        }))
-                    })
-                    .collect::<Vec<_>>();
+                                let material = StandardMaterial {
+                                    unlit: true,
+                                    ..StandardMaterial::from((**paint_skies_canvas).clone())
+                                };
 
-                Some(spawn_commands)
-            })
+                                let paint_layer = *layer_index;
+
+                                Some(asset_add_and(mesh, move |mesh_handle| {
+                                    asset_add_and(material, move |material_handle| {
+                                        command_spawn((
+                                            Mesh3d(mesh_handle),
+                                            MeshMaterial3d(material_handle),
+                                            transform,
+                                            PAINTED_LAYER,
+                                            PaintedMesh {
+                                                painted_from: paintable_mesh_entity,
+                                                triangle_index,
+                                                paint_layer,
+                                            },
+                                        ))
+                                    })
+                                }))
+                            },
+                        )
+                        .collect::<Vec<_>>();
+
+                    Some(spawn_commands)
+                },
+            )
             .flatten()
             .collect::<Vec<_>>(),
         res_set(LayerIndex(**layer_index + 1)),
