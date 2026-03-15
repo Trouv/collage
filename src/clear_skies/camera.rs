@@ -1,7 +1,7 @@
 use std::f32::consts::PI;
 
 use bevy::asset::RenderAssetUsages;
-use bevy::camera::{CameraMainTextureUsages, RenderTarget};
+use bevy::camera::RenderTarget;
 use bevy::prelude::*;
 use bevy::render::render_resource::{TextureFormat, TextureUsages};
 use bevy_pipe_affect::prelude::{command_insert_resource, *};
@@ -112,6 +112,7 @@ pub fn spawn_paint_skies_camera(
     SphericalCoordsBounds,
     Camera,
     RenderTarget,
+    PaintableHistory<GlobalTransform>,
 )> {
     let input_map = InputMap::default()
         .with(PaintSkiesAction::Paint, GamepadButton::RightTrigger)
@@ -138,6 +139,7 @@ pub fn spawn_paint_skies_camera(
             ..default()
         },
         RenderTarget::from((**render_target).clone()),
+        PaintableHistory::<GlobalTransform>::default(),
     ))
 }
 
