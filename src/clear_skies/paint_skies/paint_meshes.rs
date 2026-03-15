@@ -14,7 +14,7 @@ use crate::clear_skies::paint_skies::paint_layer_history::{
     PaintLayerHistoryPlugin,
     PaintableHistory,
 };
-use crate::clear_skies::paint_skies::triangle_with_uvs::TriangleWithUvs;
+use crate::clear_skies::paint_skies::triangle_with_uvs::{OctahedronWithUvs, TriangleWithUvs};
 use crate::clear_skies::play_skies::PlaySkiesCamera;
 use crate::clear_skies::render_layers::{PAINTABLE_LAYER, PAINTED_LAYER};
 use crate::effects::{AssetsInsert, assets_insert};
@@ -28,7 +28,7 @@ impl Plugin for PaintMeshesPlugin {
             .init_resource::<PaintLayerSettings>()
             .init_resource::<LayerIndex>()
             .add_message::<ReadyToPaint>()
-            .add_plugins(PaintLayerHistoryPlugin::<Transform>::default())
+            .add_plugins(PaintLayerHistoryPlugin::<GlobalTransform>::default())
             .add_systems(
                 OnEnter(ClearSkiesState::Setup),
                 create_paint_skies_canvas.pipe(affect),
@@ -100,7 +100,7 @@ fn propagate_paintable_on_scenes(
 fn track_transform_for_paintable_meshes(
     meshes: Query<Entity, (With<Mesh3d>, Added<Paintable>)>,
     layer_index: Res<LayerIndex>,
-) -> Vec<EntityCommandInsert<PaintableHistory<Transform>>> {
+) -> Vec<EntityCommandInsert<PaintableHistory<GlobalTransform>>> {
     meshes
         .into_iter()
         .map(|entity| {
