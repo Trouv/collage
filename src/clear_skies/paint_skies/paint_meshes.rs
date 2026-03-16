@@ -28,7 +28,10 @@ impl Plugin for PaintMeshesPlugin {
             .init_resource::<PaintLayerSettings>()
             .init_resource::<LayerIndex>()
             .add_message::<ReadyToPaint>()
-            .add_plugins(PaintLayerHistoryPlugin::<GlobalTransform>::default())
+            .add_plugins((
+                PaintLayerHistoryPlugin::<GlobalTransform>::default(),
+                PaintLayerHistoryPlugin::<ActionState<PaintSkiesAction>>::default(),
+            ))
             .add_systems(
                 OnEnter(ClearSkiesState::Setup),
                 create_paint_skies_canvas.pipe(affect),
@@ -66,18 +69,11 @@ impl Default for PaintMeshesTimer {
     }
 }
 
-fn tick_paint_meshes_timer(
-    time: Res<Time>,
-    paint: Single<&ActionState<PaintSkiesAction>>,
-) -> ResSetWith<PaintMeshesTimer> {
+fn tick_paint_meshes_timer(time: Res<Time>) -> ResSetWith<PaintMeshesTimer> {
     let delta_time = time.delta();
 
-    let painting = paint.pressed(&PaintSkiesAction::Paint);
-
     res_set_with(move |mut timer: PaintMeshesTimer| {
-        if painting {
-            timer.tick(delta_time);
-        }
+        timer.tick(delta_time);
 
         timer
     })
@@ -302,6 +298,8 @@ fn paint_meshes(
             &Camera,
             &GlobalTransform,
             &PaintableHistory<GlobalTransform>,
+            &ActionState<PaintSkiesAction>,
+            &PaintableHistory<ActionState<PaintSkiesAction>>,
         ),
         With<Paintable>,
     >,
@@ -310,33 +308,46 @@ fn paint_meshes(
     paint_layer_settings: Res<PaintLayerSettings>,
     paint_skies_canvas: Res<PaintSkiesCanvas>,
 ) -> (Vec<impl Effect + use<>>, ResSet<LayerIndex>) {
-    let (paintable_camera, paintable_camera_transform, paintable_camera_transform_history) =
-        *paintable_camera;
-    let previous_layer_index = LayerIndex(layer_index.saturating_sub(1));
-    let previous_paintable_camera_transform = paintable_camera_transform_history
-        .get(previous_layer_index)
-        .unwrap_or(paintable_camera_transform);
-
-    let (play_skies_camera, play_skies_camera_transform) = *play_skies_camera;
-
-    let triangle_projector_for_mesh = triangle_projector_for_mesh_for_universe(
-        &paint_layer_settings,
-        &layer_index,
+    let (
         paintable_camera,
         paintable_camera_transform,
-        play_skies_camera,
-        play_skies_camera_transform,
-    );
-    let previous_triangle_projector_for_mesh = triangle_projector_for_mesh_for_universe(
-        &paint_layer_settings,
-        &previous_layer_index,
-        paintable_camera,
-        previous_paintable_camera_transform,
-        play_skies_camera,
-        play_skies_camera_transform,
-    );
+        paintable_camera_transform_history,
+        paint_action,
+        paint_action_history,
+    ) = *paintable_camera;
 
-    (
+    let add_meshes = if !paint_action.pressed(&PaintSkiesAction::Paint) {
+        vec![]
+    } else {
+        let previous_layer_index = LayerIndex(layer_index.saturating_sub(1));
+        let previous_paint_pressed = paint_action_history
+            .get(previous_layer_index)
+            .is_some_and(|action_state| action_state.pressed(&PaintSkiesAction::Paint));
+
+        let previous_paintable_camera_transform = previous_paint_pressed
+            .then(|| paintable_camera_transform_history.get(previous_layer_index))
+            .flatten()
+            .unwrap_or(paintable_camera_transform);
+
+        let (play_skies_camera, play_skies_camera_transform) = *play_skies_camera;
+
+        let triangle_projector_for_mesh = triangle_projector_for_mesh_for_universe(
+            &paint_layer_settings,
+            &layer_index,
+            paintable_camera,
+            paintable_camera_transform,
+            play_skies_camera,
+            play_skies_camera_transform,
+        );
+        let previous_triangle_projector_for_mesh = triangle_projector_for_mesh_for_universe(
+            &paint_layer_settings,
+            &previous_layer_index,
+            paintable_camera,
+            previous_paintable_camera_transform,
+            play_skies_camera,
+            play_skies_camera_transform,
+        );
+
         paintable_meshes
             .iter()
             .flat_map(
@@ -408,7 +419,8 @@ fn paint_meshes(
                 },
             )
             .flatten()
-            .collect::<Vec<_>>(),
-        res_set(LayerIndex(**layer_index + 1)),
-    )
+            .collect::<Vec<_>>()
+    };
+
+    (add_meshes, res_set(LayerIndex(**layer_index + 1)))
 }
