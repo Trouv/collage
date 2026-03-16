@@ -112,7 +112,6 @@ pub fn spawn_paint_skies_camera(
     SphericalCoordsBounds,
     Camera,
     RenderTarget,
-    PaintableHistory<GlobalTransform>,
 )> {
     let input_map = InputMap::default()
         .with(PaintSkiesAction::Paint, GamepadButton::RightTrigger)
@@ -139,13 +138,12 @@ pub fn spawn_paint_skies_camera(
             ..default()
         },
         RenderTarget::from((**render_target).clone()),
-        PaintableHistory::<GlobalTransform>::default(),
     ))
 }
 
 /// The camera controlled in the paint skies state whose subjects get painted.
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, Hash, Reflect, Component)]
-#[require(Name = "PaintSkiesCamera", Camera3d, LookAtSphericalCoords, Paintable, PaintableHistory<Transform>)]
+#[require(Name = "PaintSkiesCamera", Camera3d, LookAtSphericalCoords, Paintable, PaintableHistory<GlobalTransform>, PaintableHistory<ActionState<PaintSkiesAction>>)]
 pub struct PaintSkiesCamera;
 
 /// Marker component for the viewport UI node displaying the [`ClearSkiesRenderTarget`].
