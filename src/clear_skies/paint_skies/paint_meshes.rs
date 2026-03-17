@@ -51,7 +51,15 @@ impl Plugin for PaintMeshesPlugin {
                     .chain()
                     .run_if(in_state(ClearSkiesState::PaintSkies)),
             )
-            .add_systems(Update, track_transform_for_paintable_meshes.pipe(affect));
+            .add_systems(
+                Update,
+                (
+                    track_transform_for_paintable_meshes.pipe(affect),
+                    paint_meshes.pipe(affect).run_if(
+                        in_state(ClearSkiesState::PaintSkies).and(on_message::<ReadyToPaint>),
+                    ),
+                ),
+            );
     }
 }
 
@@ -183,16 +191,7 @@ pub struct ReadyToPaint;
 fn paint_canvas(
     timer: Res<PaintMeshesTimer>,
     render_target: Res<ClearSkiesRenderTarget>,
-) -> Option<
-    CommandSpawnAnd<
-        Screenshot,
-        (
-            CommandSpawn<Observer>,
-            CommandSpawn<Observer>,
-            CommandSpawn<Observer>,
-        ),
-    >,
-> {
+) -> Option<CommandSpawnAnd<Screenshot, (CommandSpawn<Observer>, CommandSpawn<Observer>)>> {
     if timer.just_finished() {
         let effect = command_spawn_and(Screenshot::image((**render_target).clone()), |entity| {
             (
@@ -202,7 +201,6 @@ fn paint_canvas(
                 command_spawn(
                     Observer::new(save_screenshot_to_canvas.pipe(affect)).with_entity(entity),
                 ),
-                command_spawn(Observer::new(paint_meshes.pipe(affect)).with_entity(entity)),
             )
         });
 
@@ -282,7 +280,6 @@ pub struct PaintedMesh {
 pub struct PaintedMeshes(Vec<Entity>);
 
 fn paint_meshes(
-    _: On<ScreenshotCaptured>,
     paintable_meshes: Query<
         (
             Entity,
