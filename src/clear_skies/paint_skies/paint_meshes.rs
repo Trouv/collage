@@ -55,9 +55,14 @@ impl Plugin for PaintMeshesPlugin {
                 Update,
                 (
                     track_transform_for_paintable_meshes.pipe(affect),
-                    paint_meshes.pipe(affect).run_if(
-                        in_state(ClearSkiesState::PaintSkies).and(on_message::<ReadyToPaint>),
-                    ),
+                    (
+                        paint_meshes.pipe(affect),
+                        (|| res_set_with(|LayerIndex(i)| LayerIndex(i + 1))).pipe(affect),
+                    )
+                        .chain()
+                        .run_if(
+                            in_state(ClearSkiesState::PaintSkies).and(on_message::<ReadyToPaint>),
+                        ),
                 ),
             );
     }
@@ -304,7 +309,7 @@ fn paint_meshes(
     layer_index: Res<LayerIndex>,
     paint_layer_settings: Res<PaintLayerSettings>,
     paint_skies_canvas: Res<PaintSkiesCanvas>,
-) -> (Vec<impl Effect + use<>>, ResSet<LayerIndex>) {
+) -> Vec<impl Effect + use<>> {
     let (
         paintable_camera,
         paintable_camera_transform,
@@ -313,7 +318,7 @@ fn paint_meshes(
         paint_action_history,
     ) = *paintable_camera;
 
-    let add_meshes = if !paint_action.pressed(&PaintSkiesAction::Paint) {
+    if !paint_action.pressed(&PaintSkiesAction::Paint) {
         vec![]
     } else {
         let previous_layer_index = LayerIndex(layer_index.saturating_sub(1));
@@ -417,7 +422,5 @@ fn paint_meshes(
             )
             .flatten()
             .collect::<Vec<_>>()
-    };
-
-    (add_meshes, res_set(LayerIndex(**layer_index + 1)))
+    }
 }
