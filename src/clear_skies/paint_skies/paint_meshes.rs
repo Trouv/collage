@@ -309,7 +309,21 @@ fn paint_meshes(
     layer_index: Res<LayerIndex>,
     paint_layer_settings: Res<PaintLayerSettings>,
     paint_skies_canvas: Res<PaintSkiesCanvas>,
-) -> Vec<impl Effect + use<>> {
+) -> Vec<
+    AssetAddAnd<
+        Mesh,
+        AssetAddAnd<
+            StandardMaterial,
+            CommandSpawn<(
+                Mesh3d,
+                MeshMaterial3d<StandardMaterial>,
+                Transform,
+                RenderLayers,
+                PaintedMesh,
+            )>,
+        >,
+    >,
+> {
     let (
         paintable_camera,
         paintable_camera_transform,
@@ -376,7 +390,7 @@ fn paint_meshes(
                                 previous_triangle_projector(triangle)?,
                             ))
                         })
-                        .map(
+                        .flat_map(
                             |(triangle_index, triangle_with_uvs, previous_triangle_with_uvs)| {
                                 let octahedron_with_uvs = OctahedronWithUvs {
                                     near_face: triangle_with_uvs,
