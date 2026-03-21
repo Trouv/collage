@@ -173,23 +173,23 @@ pub fn spawn_viewport(
 pub fn letterbox_or_pillarbox_viewport(
     window: Single<&Window>,
     resolution: Res<ClearSkiesResolution>,
-) -> ComponentsSetFilteredWith<(Node,), With<ClearSkiesViewport>> {
+) -> QueryMap<&'static Node, ComponentSet<Node>, With<ClearSkiesViewport>> {
     let window_aspect_ratio = window.width() / window.height();
     let target_aspect_ratio = resolution.x as f32 / resolution.y as f32;
 
-    components_set_filtered_with::<_, _, With<ClearSkiesViewport>>(move |(node,): (Node,)| {
+    query_map(move |node: &Node| {
         if window_aspect_ratio > target_aspect_ratio {
-            (Node {
+            component_set(Node {
                 width: Val::Auto,
                 height: percent(100),
-                ..node
-            },)
+                ..node.clone()
+            })
         } else {
-            (Node {
+            component_set(Node {
                 width: percent(100),
                 height: Val::Auto,
-                ..node
-            },)
+                ..node.clone()
+            })
         }
     })
 }
