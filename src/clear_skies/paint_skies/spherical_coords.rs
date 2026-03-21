@@ -15,16 +15,16 @@ pub struct LookAtSphericalCoords {
 }
 
 pub fn look_at_spherical_coords()
--> ComponentsSetWithQueryData<(Transform,), &'static LookAtSphericalCoords> {
-    components_set_with_query_data(
-        |(transform,): (Transform,), coords: &LookAtSphericalCoords| {
+-> QueryMap<(&'static Transform, &'static LookAtSphericalCoords), ComponentSet<Transform>> {
+    query_map(
+        |(transform, coords): (&Transform, &LookAtSphericalCoords)| {
             let theta_unit_circle_coords = Vec2::new(coords.theta.cos(), coords.theta.sin());
             let phi_unit_circle_coords = Vec2::new(coords.phi.cos(), coords.phi.sin());
 
             let xy = theta_unit_circle_coords * phi_unit_circle_coords.x;
             let look_at = xy.extend(phi_unit_circle_coords.y) + transform.translation;
 
-            (transform.looking_at(look_at, Vec3::Z),)
+            component_set(transform.looking_at(look_at, Vec3::Z))
         },
     )
 }
