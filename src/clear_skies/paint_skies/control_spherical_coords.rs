@@ -13,26 +13,30 @@ use crate::clear_skies::paint_skies::spherical_coords::{
 
 pub fn control_spherical_coords(
     settings: Res<PaintSkiesSettings>,
-) -> ComponentsSetFilteredWithQueryData<
-    (LookAtSphericalCoords,),
+) -> QueryMap<
     (
+        &'static LookAtSphericalCoords,
         &'static ActionState<PaintSkiesAction>,
         &'static SphericalCoordsBounds,
     ),
+    ComponentSet<LookAtSphericalCoords>,
     With<PaintSkiesCamera>,
 > {
     let rotate_sensitivity = settings.rotate_sensitivity;
 
-    components_set_filtered_with_query_data(
-        move |(spherical_coords,): (LookAtSphericalCoords,),
-              (action_state, bounds): (&ActionState<PaintSkiesAction>, &SphericalCoordsBounds)| {
+    query_map(
+        move |(spherical_coords, action_state, bounds): (
+            &LookAtSphericalCoords,
+            &ActionState<PaintSkiesAction>,
+            &SphericalCoordsBounds,
+        )| {
             let rotate_by = action_state.clamped_axis_pair(&PaintSkiesAction::Rotate);
 
             let phi = (spherical_coords.phi + (rotate_by.y * rotate_sensitivity))
                 .clamp(bounds.min_phi, bounds.max_phi);
             let theta = (spherical_coords.theta - (rotate_by.x * rotate_sensitivity)) % (2.0 * PI);
 
-            (LookAtSphericalCoords { phi, theta },)
+            component_set(LookAtSphericalCoords { phi, theta })
         },
     )
 }
