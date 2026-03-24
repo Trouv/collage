@@ -43,6 +43,13 @@ impl<C> PaintableHistory<C> {
 
         self.history.get(relative_index_usize)
     }
+
+    pub fn iter_enumerate_layers(&self) -> impl Iterator<Item = (LayerIndex, &C)> {
+        self.history
+            .iter()
+            .enumerate()
+            .map(|(i, c)| (LayerIndex(self.initial_layer.0 + i as u32), c))
+    }
 }
 
 fn record_history<C>() -> ComponentsSetWithQueryData<(PaintableHistory<C>,), &'static C>
