@@ -52,12 +52,14 @@ impl<C> PaintableHistory<C> {
     }
 }
 
-fn record_history<C>() -> ComponentsSetWithQueryData<(PaintableHistory<C>,), &'static C>
+fn record_history<C>()
+-> QueryMap<(&'static PaintableHistory<C>, &'static C), ComponentSet<PaintableHistory<C>>>
 where
     C: Component + Clone,
 {
-    components_set_with_query_data(|(mut history,): (PaintableHistory<C>,), c: &C| {
+    query_map(|(history, c): (&PaintableHistory<C>, &C)| {
+        let mut history = history.clone();
         history.history.push(c.clone());
-        (history,)
+        component_set(history)
     })
 }
