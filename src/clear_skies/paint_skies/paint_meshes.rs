@@ -193,6 +193,29 @@ fn save_screenshot_to_canvas(
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Default, Message)]
 pub struct ReadyToPaint;
 
+fn trigger_paint_layer_if_recent_input(
+    _: On<ScreenshotCaptured>,
+    paint_action_query: Single<(
+        &ActionState<PaintSkiesAction>,
+        &PaintableHistory<ActionState<PaintSkiesAction>>,
+    )>,
+    layer_index: Res<LayerIndex>,
+) -> Option<MessageWrite<ReadyToPaint>> {
+    let (paint_action, paint_action_history) = *paint_action_query;
+
+    if paint_action.pressed(&PaintSkiesAction::Paint)
+        || ((0..5)
+            .map(|offset| {
+                paint_action_history.get(LayerIndex(layer_index.0.saturating_sub(offset)))
+            })
+            .any(|action| action.is_some_and(|action| action.pressed(&PaintSkiesAction::Paint))))
+    {
+        Some(message_write(ReadyToPaint))
+    } else {
+        None
+    }
+}
+
 fn paint_canvas(
     timer: Res<PaintMeshesTimer>,
     render_target: Res<ClearSkiesRenderTarget>,
@@ -201,7 +224,7 @@ fn paint_canvas(
         let effect = command_spawn_and(Screenshot::image((**render_target).clone()), |entity| {
             (
                 command_spawn(Observer::new(
-                    (|_: On<ScreenshotCaptured>| message_write(ReadyToPaint)).pipe(affect),
+                    trigger_paint_layer_if_recent_input.pipe(affect),
                 )),
                 command_spawn(
                     Observer::new(save_screenshot_to_canvas.pipe(affect)).with_entity(entity),
