@@ -132,6 +132,7 @@ pub struct LayerIndex(pub u32);
 pub struct PaintLayerSettings {
     pub zero_layer_distance: f32,
     pub layer_distance_collapse_rate: f32,
+    pub max_empty_layers: u32,
 }
 
 impl Default for PaintLayerSettings {
@@ -139,6 +140,7 @@ impl Default for PaintLayerSettings {
         PaintLayerSettings {
             zero_layer_distance: 1000.0,
             layer_distance_collapse_rate: 0.98,
+            max_empty_layers: 10,
         }
     }
 }
@@ -200,11 +202,12 @@ fn trigger_paint_layer_if_recent_input(
         &PaintableHistory<ActionState<PaintSkiesAction>>,
     )>,
     layer_index: Res<LayerIndex>,
+    paint_layer_settings: Res<PaintLayerSettings>,
 ) -> Option<MessageWrite<ReadyToPaint>> {
     let (paint_action, paint_action_history) = *paint_action_query;
 
     if paint_action.pressed(&PaintSkiesAction::Paint)
-        || ((0..5)
+        || ((0..paint_layer_settings.max_empty_layers)
             .map(|offset| {
                 paint_action_history.get(LayerIndex(layer_index.0.saturating_sub(offset)))
             })
