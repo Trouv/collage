@@ -32,7 +32,7 @@ impl<A: Actionlike + TypePath + GetTypeRegistration> Plugin for SwitchGamepadsPl
 
 pub fn switch_gamepads<A: Actionlike>(
     mut gamepad_events: MessageReader<GamepadEvent>,
-) -> Vec<ComponentsSetWith<(InputMap<A>,)>> {
+) -> Vec<QueryMap<&'static InputMap<A>, ComponentSet<InputMap<A>>>> {
     gamepad_events
         .read()
         .map(|event| {
@@ -44,8 +44,8 @@ pub fn switch_gamepads<A: Actionlike>(
 
             let entity = *entity;
 
-            components_set_with::<_, _>(move |(input_map,): (InputMap<A>,)| {
-                (input_map.with_gamepad(entity),)
+            query_map(move |input_map: &InputMap<A>| {
+                component_set(input_map.clone().with_gamepad(entity))
             })
         })
         .collect()
