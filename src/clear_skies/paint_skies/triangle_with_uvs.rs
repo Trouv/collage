@@ -1,4 +1,4 @@
-use bevy::mesh::{Indices, MeshMergeError};
+use bevy::mesh::Indices;
 use bevy::prelude::*;
 
 /// A Triangle and custom UVs that can be converted to a Mesh.
