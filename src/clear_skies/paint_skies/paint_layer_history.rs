@@ -23,6 +23,7 @@ where
     }
 }
 
+/// `Component` that stores the history of another component by layer index.
 #[derive(Clone, PartialEq, Eq, Debug, Default, Component)]
 pub struct PaintableHistory<C> {
     history: Vec<C>,
@@ -30,6 +31,7 @@ pub struct PaintableHistory<C> {
 }
 
 impl<C> PaintableHistory<C> {
+    /// Construct a new [`PaintableHistory`] with the given initial layer.
     pub fn new_with_initial_layer(initial_layer: LayerIndex) -> Self {
         PaintableHistory {
             initial_layer,
@@ -37,6 +39,7 @@ impl<C> PaintableHistory<C> {
         }
     }
 
+    /// Get the historical value of the component at this layer index.
     pub fn get(&self, LayerIndex(absolute_index): LayerIndex) -> Option<&C> {
         let relative_index = absolute_index.checked_sub(self.initial_layer.0)?;
         let relative_index_usize: usize = relative_index.try_into().ok()?;
@@ -44,6 +47,8 @@ impl<C> PaintableHistory<C> {
         self.history.get(relative_index_usize)
     }
 
+    /// Similar to `vec.iter().enumerate()`, returns an iterator that enumerates the history with `LayerIndex`es.
+    #[expect(dead_code)]
     pub fn iter_enumerate_layers(&self) -> impl Iterator<Item = (LayerIndex, &C)> {
         self.history
             .iter()
@@ -52,6 +57,8 @@ impl<C> PaintableHistory<C> {
     }
 }
 
+/// System that records the history of a component if it has a corresponding `PaintableHistory`
+/// component.
 fn record_history<C>()
 -> QueryMap<(&'static PaintableHistory<C>, &'static C), ComponentSet<PaintableHistory<C>>>
 where
