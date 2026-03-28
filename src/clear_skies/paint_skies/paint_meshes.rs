@@ -115,7 +115,7 @@ fn track_transform_for_paintable_meshes(
         .map(|entity| {
             entity_command_insert(
                 entity,
-                PaintableHistory::new_with_initial_layer(layer_index.clone()),
+                PaintableHistory::new_with_initial_layer(*layer_index),
             )
         })
         .collect()

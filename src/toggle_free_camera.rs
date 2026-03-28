@@ -38,6 +38,7 @@ impl Plugin for ToggleFreeCameraPlugin {
 struct ToggleFreeCamera;
 
 #[derive(Effect)]
+#[expect(clippy::large_enum_variant)]
 enum SpawnOrDespawnFreeCamera {
     Spawn(AssetAddAnd<Image, CommandSpawn<(ToggleFreeCamera, RenderLayers, RenderTarget)>>),
     Despawn(EntityCommandDespawn),
@@ -84,7 +85,6 @@ struct ToggleFreeCameraViewportNode;
 fn spawn_viewport(
     camera: Single<Entity, Added<ToggleFreeCamera>>,
 ) -> CommandSpawn<(ToggleFreeCameraViewportNode, Node, ViewportNode)> {
-    let camera = camera.clone();
     command_spawn((
         ToggleFreeCameraViewportNode,
         Node {
@@ -94,7 +94,7 @@ fn spawn_viewport(
             height: percent(50),
             ..default()
         },
-        ViewportNode::new(camera),
+        ViewportNode::new(*camera),
     ))
 }
 
