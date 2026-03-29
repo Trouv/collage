@@ -17,7 +17,6 @@ use crate::clear_skies::paint_skies::paint_layer_history::{
 use crate::clear_skies::paint_skies::triangle_with_uvs::{OctahedronWithUvs, TriangleWithUvs};
 use crate::clear_skies::play_skies::PlaySkiesCamera;
 use crate::clear_skies::render_layers::{PAINTABLE_LAYER, PAINTED_LAYER};
-use crate::effects::{AssetsInsert, assets_insert};
 
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, Hash, Reflect)]
 pub struct PaintMeshesPlugin;
@@ -187,8 +186,8 @@ fn world_to_viewport_uv(
 fn save_screenshot_to_canvas(
     screenshot: On<ScreenshotCaptured>,
     canvas: Res<PaintSkiesCanvas>,
-) -> AssetsInsert<Image> {
-    assets_insert((**canvas).clone(), screenshot.image.clone())
+) -> AssetInsert<Image> {
+    asset_insert(&**canvas, screenshot.image.clone())
 }
 
 /// Message that is sent when the screenshot for painting mesh UVs is ready.

@@ -16,8 +16,6 @@ mod clear_skies;
 
 mod args;
 
-mod effects;
-
 #[cfg(feature = "dev")]
 mod toggle_free_camera;
 
