@@ -11,6 +11,8 @@ use crate::clear_skies::paint_skies::spherical_coords::{
     SphericalCoordsBounds,
 };
 
+/// Updates the [`LookAtSphericalCoords`] for the [`PaintSkiesCamera`] according to
+/// [`PaintSkiesAction::Rotate`] input.
 pub fn control_spherical_coords(
     settings: Res<PaintSkiesSettings>,
 ) -> QueryMap<
