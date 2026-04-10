@@ -84,9 +84,9 @@ impl Default for PaintMeshesTimer {
 fn tick_paint_meshes_timer(time: Res<Time>) -> ResSetWith<PaintMeshesTimer> {
     let delta_time = time.delta();
 
-    res_set_with(move |mut timer: PaintMeshesTimer| {
+    res_set_with(move |timer: &PaintMeshesTimer| {
+        let mut timer = timer.clone();
         timer.tick(delta_time);
-
         timer
     })
 }
