@@ -155,7 +155,7 @@ pub struct ClearSkiesViewport;
 pub fn spawn_viewport(
     resolution: Res<ClearSkiesResolution>,
     texture: Res<ClearSkiesRenderTarget>,
-) -> CommandSpawn<(ImageNode, ClearSkiesViewport, Node, ZIndex)> {
+) -> CommandSpawn<(ImageNode, ClearSkiesViewport, Node)> {
     command_spawn((
         ImageNode::new((**texture).clone()),
         ClearSkiesViewport,
@@ -165,7 +165,6 @@ pub fn spawn_viewport(
             justify_self: JustifySelf::Center,
             ..default()
         },
-        ZIndex(0),
     ))
 }
 
