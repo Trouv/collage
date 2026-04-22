@@ -148,6 +148,7 @@ pub struct PaintSkiesCamera;
 
 /// Marker component for the viewport UI node displaying the [`ClearSkiesRenderTarget`].
 #[derive(Default, Debug, PartialEq, Eq, Copy, Clone, Hash, Reflect, Component)]
+#[require(Name = "ClearSkiesViewport")]
 pub struct ClearSkiesViewport;
 
 /// Defines the viewport UI node displaying the [`ClearSkiesRenderTarget`].
