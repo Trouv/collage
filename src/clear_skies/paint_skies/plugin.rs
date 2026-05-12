@@ -9,6 +9,7 @@ use crate::clear_skies::paint_skies::settings::PaintSkiesSettings;
 use crate::clear_skies::paint_skies::spherical_coords::look_at_spherical_coords;
 use crate::clear_skies::switch_gamepads::SwitchGamepadsPlugin;
 
+/// Plugin that contains systems and settings related to the [`ClearSkiesState::PaintSkies`] state.
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, Hash, Reflect)]
 pub struct PaintSkiesPlugin;
 
