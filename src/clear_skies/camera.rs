@@ -143,11 +143,13 @@ pub fn spawn_paint_skies_camera(
 
 /// The camera controlled in the paint skies state whose subjects get painted.
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, Hash, Reflect, Component)]
+#[reflect(Component)]
 #[require(Name = "PaintSkiesCamera", Camera3d, LookAtSphericalCoords, Paintable, PaintableHistory<GlobalTransform>, PaintableHistory<ActionState<PaintSkiesAction>>)]
 pub struct PaintSkiesCamera;
 
 /// Marker component for the viewport UI node displaying the [`ClearSkiesRenderTarget`].
 #[derive(Default, Debug, PartialEq, Eq, Copy, Clone, Hash, Reflect, Component)]
+#[reflect(Component)]
 #[require(Name = "ClearSkiesViewport")]
 pub struct ClearSkiesViewport;
 

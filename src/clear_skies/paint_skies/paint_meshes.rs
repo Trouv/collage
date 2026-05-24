@@ -69,6 +69,7 @@ impl Plugin for PaintMeshesPlugin {
 
 /// Marker component for paintable meshes.
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, Hash, Reflect, Component)]
+#[reflect(Component)]
 #[require(Mesh3d, RenderLayers = PAINTABLE_LAYER)]
 pub struct Paintable;
 
@@ -292,7 +293,8 @@ fn triangle_projector_for_mesh_for_universe<'w>(
 }
 
 /// Component for meshes that are created by painting the paintable meshes.
-#[derive(Copy, Clone, PartialEq, Eq, Debug, Component)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Component, Reflect)]
+#[reflect(Component)]
 #[relationship(relationship_target = PaintedMeshes)]
 pub struct PaintedMesh {
     /// The entity whose mesh was used to paint this mesh.
@@ -305,7 +307,8 @@ pub struct PaintedMesh {
 }
 
 /// The meshes that were painted from this entity's mesh.
-#[derive(Clone, PartialEq, Eq, Debug, Deref, Component)]
+#[derive(Clone, PartialEq, Eq, Debug, Deref, Component, Reflect)]
+#[reflect(Component)]
 #[relationship_target(relationship = PaintedMesh)]
 pub struct PaintedMeshes(Vec<Entity>);
 

@@ -24,7 +24,8 @@ where
 }
 
 /// `Component` that stores the history of another component by layer index.
-#[derive(Clone, PartialEq, Eq, Debug, Default, Component)]
+#[derive(Clone, PartialEq, Eq, Debug, Default, Component, Reflect)]
+#[reflect(Component)]
 pub struct PaintableHistory<C> {
     history: Vec<C>,
     initial_layer: LayerIndex,

@@ -7,6 +7,7 @@ use crate::clear_skies::camera::ClearSkiesRenderTarget;
 use crate::clear_skies::render_layers::PAINTED_LAYER;
 
 #[derive(Default, Debug, PartialEq, Eq, Copy, Clone, Hash, Reflect, Component)]
+#[reflect(Component)]
 #[require(Name = "PlaySkiesCamera", Camera3d, RenderLayers = PAINTED_LAYER)]
 pub struct PlaySkiesCamera;
 

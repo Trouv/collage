@@ -2,12 +2,14 @@ use bevy::prelude::*;
 use bevy_pipe_affect::prelude::*;
 
 #[derive(Debug, Default, Copy, Clone, PartialEq, Reflect, Component)]
+#[reflect(Component)]
 pub struct SphericalCoordsBounds {
     pub max_phi: f32,
     pub min_phi: f32,
 }
 
 #[derive(Debug, Default, Copy, Clone, PartialEq, Reflect, Component)]
+#[reflect(Component)]
 #[require(SphericalCoordsBounds, Transform)]
 pub struct LookAtSphericalCoords {
     pub theta: f32,

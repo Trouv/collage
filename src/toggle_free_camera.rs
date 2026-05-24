@@ -33,7 +33,8 @@ impl Plugin for ToggleFreeCameraPlugin {
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Debug, Component)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Component, Reflect)]
+#[reflect(Component)]
 #[require(Camera3d, FreeCamera, Name = "ToggleFreeCamera")]
 struct ToggleFreeCamera;
 
@@ -78,7 +79,8 @@ fn spawn_or_despawn_free_cam(
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Debug, Component)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Component, Reflect)]
+#[reflect(Component)]
 #[require(Name = "ToggleFreeCameraViewportNode", ZIndex(10))]
 struct ToggleFreeCameraViewportNode;
 
