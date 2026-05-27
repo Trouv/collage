@@ -5,6 +5,7 @@ use bevy::prelude::*;
 use bevy_inspector_egui::bevy_egui::EguiPlugin;
 #[cfg(feature = "dev")]
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
+use bevy_skein::SkeinPlugin;
 use clap::Parser;
 
 use crate::args::DevArgs;
@@ -40,6 +41,7 @@ fn main() {
                 ..default()
             })
             .set(ImagePlugin::default_nearest()),
+        SkeinPlugin::default(),
         ClearSkiesPlugin,
     ))
     .init_state::<state::GameState>();
