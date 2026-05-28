@@ -23,10 +23,10 @@ pub fn look_at_spherical_coords()
             let theta_unit_circle_coords = Vec2::new(coords.theta.cos(), coords.theta.sin());
             let phi_unit_circle_coords = Vec2::new(coords.phi.cos(), coords.phi.sin());
 
-            let xy = theta_unit_circle_coords * phi_unit_circle_coords.x;
-            let look_at = xy.extend(phi_unit_circle_coords.y) + transform.translation;
+            let xz = theta_unit_circle_coords * phi_unit_circle_coords.x;
+            let look_at = Vec3::new(xz.x, phi_unit_circle_coords.y, xz.y) + transform.translation;
 
-            component_set(transform.looking_at(look_at, Vec3::Z))
+            component_set(transform.looking_at(look_at, Vec3::Y))
         },
     )
 }

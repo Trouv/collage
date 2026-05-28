@@ -36,7 +36,7 @@ pub fn control_spherical_coords(
 
             let phi = (spherical_coords.phi + (rotate_by.y * rotate_sensitivity))
                 .clamp(bounds.min_phi, bounds.max_phi);
-            let theta = (spherical_coords.theta - (rotate_by.x * rotate_sensitivity)) % (2.0 * PI);
+            let theta = (spherical_coords.theta + (rotate_by.x * rotate_sensitivity)) % (2.0 * PI);
 
             component_set(LookAtSphericalCoords { phi, theta })
         },
