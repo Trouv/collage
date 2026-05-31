@@ -2,6 +2,7 @@ use std::f32::consts::PI;
 
 use bevy::asset::RenderAssetUsages;
 use bevy::camera::RenderTarget;
+use bevy::camera::visibility::RenderLayers;
 use bevy::prelude::*;
 use bevy::render::render_resource::{TextureFormat, TextureUsages};
 use bevy_pipe_affect::prelude::{command_insert_resource, *};
@@ -14,6 +15,7 @@ use crate::clear_skies::paint_skies::{
     PaintableHistory,
     SphericalCoordsBounds,
 };
+use crate::clear_skies::render_layers::PAINTABLE_LAYER;
 
 /// Plugin defining camera setup and logic for clear skies.
 #[derive(Default, Debug, PartialEq, Eq, Copy, Clone, Hash, Reflect)]
@@ -144,7 +146,7 @@ pub fn spawn_paint_skies_camera(
 /// The camera controlled in the paint skies state whose subjects get painted.
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, Hash, Reflect, Component)]
 #[reflect(Component)]
-#[require(Name = "PaintSkiesCamera", Camera3d, LookAtSphericalCoords, Paintable, PaintableHistory<GlobalTransform>, PaintableHistory<ActionState<PaintSkiesAction>>)]
+#[require(Name = "PaintSkiesCamera", Camera3d, LookAtSphericalCoords, Paintable, PaintableHistory<GlobalTransform>, PaintableHistory<ActionState<PaintSkiesAction>>, RenderLayers = PAINTABLE_LAYER.with(0))]
 pub struct PaintSkiesCamera;
 
 /// Marker component for the viewport UI node displaying the [`ClearSkiesRenderTarget`].
