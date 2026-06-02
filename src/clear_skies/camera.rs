@@ -36,10 +36,7 @@ impl Plugin for ClearSkiesCameraPlugin {
                     .chain()
                     .in_set(CreateClearSkiesRenderTarget),
             )
-            .add_systems(
-                Startup,
-                (|| command_spawn(Camera3d::default())).pipe(affect),
-            )
+            .add_systems(Startup, (|| command_spawn(Camera2d)).pipe(affect))
             .add_systems(
                 Update,
                 (
