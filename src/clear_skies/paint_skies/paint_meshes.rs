@@ -4,7 +4,6 @@ use bevy::camera::visibility::RenderLayers;
 use bevy::prelude::*;
 use bevy::render::render_resource::TextureFormat;
 use bevy::render::view::screenshot::{Screenshot, ScreenshotCaptured};
-use bevy::scene::SceneInstanceReady;
 use bevy_pipe_affect::prelude::*;
 use leafwing_input_manager::prelude::*;
 
@@ -36,11 +35,6 @@ impl Plugin for PaintMeshesPlugin {
                 create_paint_skies_canvas.pipe(affect),
             )
             .register_type::<PaintSkiesCanvas>()
-            .add_systems(
-                Startup,
-                (|| command_spawn(Observer::new(propagate_paintable_on_scenes.pipe(affect))))
-                    .pipe(affect),
-            )
             .add_systems(
                 Last,
                 (
@@ -90,20 +84,6 @@ fn tick_paint_meshes_timer(time: Res<Time>) -> ResSetWith<PaintMeshesTimer> {
         timer.tick(delta_time);
         timer
     })
-}
-
-fn propagate_paintable_on_scenes(
-    instance_ready: On<SceneInstanceReady>,
-    paintables: Query<(), With<Paintable>>,
-) -> Option<EntityCommandInsertRecursive<Children, Paintable>> {
-    if paintables.contains(instance_ready.entity) {
-        Some(entity_command_insert_recursive(
-            instance_ready.entity,
-            Paintable,
-        ))
-    } else {
-        None
-    }
 }
 
 fn track_transform_for_paintable_meshes(
