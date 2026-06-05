@@ -1,3 +1,6 @@
+//! A collage of games.
+#![warn(missing_docs)]
+
 use bevy::asset::AssetMetaCheck;
 use bevy::pbr::wireframe::{WireframeConfig, WireframePlugin};
 use bevy::prelude::*;
