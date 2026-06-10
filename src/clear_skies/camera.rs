@@ -143,6 +143,7 @@ pub fn spawn_paint_skies_camera(
             ..default()
         },
         RenderTarget::from((**render_target).clone()),
+        Transform::from_xyz(0., 2., 0.),
     ))
 }
 
