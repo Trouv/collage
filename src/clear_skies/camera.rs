@@ -100,6 +100,9 @@ pub enum PaintSkiesAction {
     /// Button input for painting the sky.
     #[actionlike(Button)]
     Paint,
+    /// Button input for removing layers.
+    #[actionlike(Button)]
+    Remove,
 }
 
 /// Defines the paint skies camera.
@@ -111,10 +114,13 @@ pub fn spawn_paint_skies_camera(
     SphericalCoordsBounds,
     Camera,
     RenderTarget,
+    Transform,
 )> {
     let input_map = InputMap::default()
         .with(PaintSkiesAction::Paint, GamepadButton::RightTrigger)
         .with(PaintSkiesAction::Paint, KeyCode::Space)
+        .with(PaintSkiesAction::Remove, GamepadButton::LeftTrigger)
+        .with(PaintSkiesAction::Remove, KeyCode::KeyX)
         .with_dual_axis(
             PaintSkiesAction::Rotate,
             GamepadStick::LEFT.with_deadzone_symmetric(0.1),
