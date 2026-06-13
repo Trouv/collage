@@ -23,6 +23,7 @@ pub struct PaintMeshesPlugin;
 impl Plugin for PaintMeshesPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<PaintMeshesTimer>()
+            .init_resource::<RemovePaintLayersTimer>()
             .init_resource::<PaintLayerSettings>()
             .init_resource::<LayerIndex>()
             .add_message::<ReadyToPaint>()
@@ -56,6 +57,11 @@ impl Plugin for PaintMeshesPlugin {
                         .run_if(
                             in_state(ClearSkiesState::PaintSkies).and(on_message::<ReadyToPaint>),
                         ),
+                    (
+                        tick_remove_paint_layers_timer.pipe(affect),
+                        remove_paint_layers.pipe(affect),
+                    )
+                        .run_if(in_state(ClearSkiesState::PaintSkies)),
                 ),
             );
     }
@@ -83,6 +89,48 @@ fn tick_paint_meshes_timer(time: Res<Time>) -> ResSetWith<PaintMeshesTimer> {
         let mut timer = timer.clone();
         timer.tick(delta_time);
         timer
+    })
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Reflect, Deref, DerefMut, Resource)]
+struct RemovePaintLayersTimer(Timer);
+
+impl Default for RemovePaintLayersTimer {
+    fn default() -> Self {
+        RemovePaintLayersTimer(Timer::new(Duration::from_millis(100), TimerMode::Repeating))
+    }
+}
+
+fn tick_remove_paint_layers_timer(time: Res<Time>) -> ResSetWith<RemovePaintLayersTimer> {
+    let delta_time = time.delta();
+
+    res_set_with(move |timer: &RemovePaintLayersTimer| {
+        let mut timer = timer.clone();
+        timer.tick(delta_time);
+        timer
+    })
+}
+
+fn remove_paint_layers(
+    timer: Res<RemovePaintLayersTimer>,
+    paint_action_query: Single<&ActionState<PaintSkiesAction>>,
+    paint_layers: Query<(Entity, &PaintedMesh)>,
+    layer_index: Res<LayerIndex>,
+) -> Option<(Vec<EntityCommandDespawn>, ResSet<LayerIndex>)> {
+    (timer.just_finished() && paint_action_query.pressed(&PaintSkiesAction::Remove)).then(|| {
+        let decremented_layer_index = layer_index.0.saturating_sub(1);
+
+        let despawned_meshes = paint_layers
+            .iter()
+            .filter(|(_, painted_mesh)| *painted_mesh.paint_layer > decremented_layer_index)
+            .map(|(entity, _)| entity)
+            .map(entity_command_despawn)
+            .collect();
+
+        (
+            despawned_meshes,
+            res_set(LayerIndex(decremented_layer_index)),
+        )
     })
 }
 
@@ -186,12 +234,15 @@ fn trigger_paint_layer_if_recent_input(
 ) -> Option<MessageWrite<ReadyToPaint>> {
     let (paint_action, paint_action_history) = *paint_action_query;
 
-    if paint_action.pressed(&PaintSkiesAction::Paint)
-        || ((0..paint_layer_settings.max_empty_layers)
-            .map(|offset| {
-                paint_action_history.get(LayerIndex(layer_index.0.saturating_sub(offset)))
-            })
-            .any(|action| action.is_some_and(|action| action.pressed(&PaintSkiesAction::Paint))))
+    if !paint_action.pressed(&PaintSkiesAction::Remove)
+        && (paint_action.pressed(&PaintSkiesAction::Paint)
+            || ((0..paint_layer_settings.max_empty_layers)
+                .map(|offset| {
+                    paint_action_history.get(LayerIndex(layer_index.0.saturating_sub(offset)))
+                })
+                .any(|action| {
+                    action.is_some_and(|action| action.pressed(&PaintSkiesAction::Paint))
+                })))
     {
         Some(message_write(ReadyToPaint))
     } else {
