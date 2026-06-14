@@ -12,6 +12,7 @@ use crate::clear_skies::camera::{ClearSkiesRenderTarget, ClearSkiesResolution, P
 use crate::clear_skies::paint_skies::paint_layer_history::{
     PaintLayerHistoryPlugin,
     PaintableHistory,
+    TruncatePaintLayers,
 };
 use crate::clear_skies::paint_skies::triangle_with_uvs::{OctahedronWithUvs, TriangleWithUvs};
 use crate::clear_skies::play_skies::PlaySkiesCamera;
@@ -27,6 +28,7 @@ impl Plugin for PaintMeshesPlugin {
             .init_resource::<PaintLayerSettings>()
             .init_resource::<LayerIndex>()
             .add_message::<ReadyToPaint>()
+            .add_message::<TruncatePaintLayers>()
             .add_plugins((
                 PaintLayerHistoryPlugin::<GlobalTransform>::default(),
                 PaintLayerHistoryPlugin::<ActionState<PaintSkiesAction>>::default(),
@@ -60,7 +62,11 @@ impl Plugin for PaintMeshesPlugin {
                     (
                         tick_remove_paint_layers_timer.pipe(affect),
                         remove_paint_layers.pipe(affect),
+                        truncate_paint_layers_meshes
+                            .pipe(affect)
+                            .run_if(on_message::<TruncatePaintLayers>),
                     )
+                        .chain()
                         .run_if(in_state(ClearSkiesState::PaintSkies)),
                 ),
             );
@@ -114,24 +120,28 @@ fn tick_remove_paint_layers_timer(time: Res<Time>) -> ResSetWith<RemovePaintLaye
 fn remove_paint_layers(
     timer: Res<RemovePaintLayersTimer>,
     paint_action_query: Single<&ActionState<PaintSkiesAction>>,
-    paint_layers: Query<(Entity, &PaintedMesh)>,
     layer_index: Res<LayerIndex>,
-) -> Option<(Vec<EntityCommandDespawn>, ResSet<LayerIndex>)> {
+) -> Option<(MessageWrite<TruncatePaintLayers>, ResSet<LayerIndex>)> {
     (timer.just_finished() && paint_action_query.pressed(&PaintSkiesAction::Remove)).then(|| {
-        let decremented_layer_index = layer_index.0.saturating_sub(1);
-
-        let despawned_meshes = paint_layers
-            .iter()
-            .filter(|(_, painted_mesh)| *painted_mesh.paint_layer > decremented_layer_index)
-            .map(|(entity, _)| entity)
-            .map(entity_command_despawn)
-            .collect();
-
-        (
-            despawned_meshes,
-            res_set(LayerIndex(decremented_layer_index)),
-        )
+        let layer = LayerIndex(layer_index.0.saturating_sub(1));
+        (message_write(TruncatePaintLayers { layer }), res_set(layer))
     })
+}
+
+fn truncate_paint_layers_meshes(
+    paint_layers: Query<(Entity, &PaintedMesh)>,
+    mut messages: MessageReader<TruncatePaintLayers>,
+) -> Vec<EntityCommandDespawn> {
+    messages
+        .read()
+        .flat_map(|TruncatePaintLayers { layer }| {
+            paint_layers
+                .iter()
+                .filter(|(_, painted_mesh)| *painted_mesh.paint_layer >= layer.0)
+                .map(|(entity, _)| entity)
+                .map(entity_command_despawn)
+        })
+        .collect()
 }
 
 fn track_transform_for_paintable_meshes(

@@ -1,6 +1,7 @@
 use std::marker::PhantomData;
 
 use bevy::prelude::*;
+use bevy::reflect::{FromReflect, GetTypeRegistration, Typed};
 use bevy_pipe_affect::prelude::*;
 
 use crate::clear_skies::paint_skies::paint_meshes::{LayerIndex, ReadyToPaint};
@@ -11,14 +12,19 @@ pub struct PaintLayerHistoryPlugin<C>(PhantomData<C>);
 
 impl<C> Plugin for PaintLayerHistoryPlugin<C>
 where
-    C: Component + Clone + Send + Sync + 'static,
+    C: Component + Typed + GetTypeRegistration + FromReflect + Clone + Send + Sync + 'static,
 {
     fn build(&self, app: &mut App) {
-        app.add_systems(
+        app.register_type::<PaintableHistory<C>>().add_systems(
             Update,
-            record_history::<C>
-                .pipe(affect)
-                .run_if(on_message::<ReadyToPaint>),
+            (
+                record_history::<C>
+                    .pipe(affect)
+                    .run_if(on_message::<ReadyToPaint>),
+                truncate_history::<C>
+                    .pipe(affect)
+                    .run_if(on_message::<TruncatePaintLayers>),
+            ),
         );
     }
 }
@@ -56,6 +62,23 @@ impl<C> PaintableHistory<C> {
             .enumerate()
             .map(|(i, c)| (LayerIndex(self.initial_layer.0 + i as u32), c))
     }
+
+    /// Returns this [`PaintableHistory`] with only the elements before layer n.
+    pub fn truncate(self, LayerIndex(n): LayerIndex) -> Self {
+        let PaintableHistory {
+            initial_layer,
+            mut history,
+        } = self;
+
+        let history_index = n.saturating_sub(initial_layer.0);
+
+        history.truncate(history_index as usize);
+
+        PaintableHistory {
+            initial_layer,
+            history,
+        }
+    }
 }
 
 /// System that records the history of a component if it has a corresponding `PaintableHistory`
@@ -69,5 +92,26 @@ where
         let mut history = history.clone();
         history.history.push(c.clone());
         component_set(history)
+    })
+}
+
+/// Send this message when you want to remove paint layers.
+#[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Message)]
+pub struct TruncatePaintLayers {
+    /// The layer index to truncate at.
+    pub layer: LayerIndex,
+}
+
+fn truncate_history<C>() -> MessagesReadAnd<
+    TruncatePaintLayers,
+    QueryMap<&'static PaintableHistory<C>, ComponentSet<PaintableHistory<C>>>,
+>
+where
+    C: Component + Clone,
+{
+    messages_read_and(|&TruncatePaintLayers { layer }| {
+        query_map(move |paintable_history: &PaintableHistory<C>| {
+            component_set(paintable_history.clone().truncate(layer))
+        })
     })
 }
