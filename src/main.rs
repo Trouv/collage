@@ -18,6 +18,8 @@ mod state;
 
 mod clear_skies;
 
+mod button_timer;
+
 mod args;
 
 #[cfg(feature = "dev")]
