@@ -60,13 +60,16 @@ impl Plugin for PaintMeshesPlugin {
                             in_state(ClearSkiesState::PaintSkies).and(on_message::<ReadyToPaint>),
                         ),
                     (
-                        tick_remove_paint_layers_timer.pipe(affect),
-                        remove_paint_layers.pipe(affect),
+                        (
+                            tick_remove_paint_layers_timer.pipe(affect),
+                            remove_paint_layers.pipe(affect),
+                        )
+                            // chained so that the remove_paint_layers catches all finished ticks
+                            .chain(),
                         truncate_paint_layers_meshes
                             .pipe(affect)
                             .run_if(on_message::<TruncatePaintLayers>),
                     )
-                        .chain()
                         .run_if(in_state(ClearSkiesState::PaintSkies)),
                 ),
             );
