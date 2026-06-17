@@ -40,6 +40,18 @@ where
     tb: PhantomData<TB>,
 }
 
+impl<TB> ButtonTimerFinished<TB>
+where
+    TB: TimeableButton,
+{
+    fn new(entity: Entity) -> Self {
+        ButtonTimerFinished {
+            entity,
+            tb: PhantomData,
+        }
+    }
+}
+
 #[derive(Clone, Default, Debug, PartialEq, Eq, Reflect, Resource, Component)]
 struct ButtonTimer<TB>
 where
@@ -91,4 +103,17 @@ where
             button_timer.timer.clone().tick(delta).clone(),
         ))
     })
+}
+
+fn button_timer_finished_message<TB>(
+    query: Query<(Entity, &ButtonTimer<TB>)>,
+) -> Vec<MessageWrite<ButtonTimerFinished<TB>>>
+where
+    TB: TimeableButton + Send + Sync + 'static,
+{
+    query
+        .iter()
+        .filter(|(_, button_timer)| button_timer.timer.just_finished())
+        .map(|(entity, _)| message_write(ButtonTimerFinished::new(entity)))
+        .collect()
 }
