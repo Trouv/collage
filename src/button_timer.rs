@@ -117,3 +117,19 @@ where
         .map(|(entity, _)| message_write(ButtonTimerFinished::new(entity)))
         .collect()
 }
+
+fn release_button_timer<TB>(
+    query: Query<(Entity, &ActionState<TB::Action>), With<ButtonTimer<TB>>>,
+) -> Vec<EntityCommandRemove<ButtonTimer<TB>>>
+where
+    TB: TimeableButton + Send + Sync + 'static,
+{
+    query
+        .iter()
+        .flat_map(|(entity, action_state)| {
+            action_state
+                .just_released(&TB::BUTTON)
+                .then(|| entity_command_remove(entity))
+        })
+        .collect()
+}
