@@ -73,7 +73,7 @@ where
     }
 }
 
-fn create_button_timer_system<TB>(
+fn press_button_timer_system<TB>(
     timer: Timer,
 ) -> impl Fn(Query<(Entity, &ActionState<TB::Action>)>) -> Vec<EntityCommandInsert<ButtonTimer<TB>>>
 where
