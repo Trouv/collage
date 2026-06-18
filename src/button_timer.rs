@@ -26,7 +26,15 @@ where
     fn build(&self, app: &mut App) {
         app.add_systems(
             Update,
-            create_button_timer_system::<TB>(self.timer.clone()).pipe(affect),
+            (
+                press_button_timer_system::<TB>(self.timer.clone()).pipe(affect),
+                (
+                    tick_button_timer::<TB>.pipe(affect),
+                    button_timer_finished_message::<TB>.pipe(affect),
+                )
+                    .chain(),
+                release_button_timer::<TB>.pipe(affect),
+            ),
         );
     }
 }
