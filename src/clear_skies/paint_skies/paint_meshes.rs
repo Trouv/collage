@@ -131,20 +131,25 @@ fn remove_paint_layers(
     })
 }
 
-fn truncate_paint_layers_meshes(
-    paint_layers: Query<(Entity, &PaintedMesh)>,
-    mut messages: MessageReader<TruncatePaintLayers>,
-) -> Vec<EntityCommandDespawn> {
-    messages
-        .read()
-        .flat_map(|TruncatePaintLayers { layer }| {
-            paint_layers
-                .iter()
-                .filter(|(_, painted_mesh)| *painted_mesh.paint_layer >= layer.0)
-                .map(|(entity, _)| entity)
-                .map(entity_command_despawn)
-        })
-        .collect()
+fn truncate_paint_layers_meshes() -> MessagesReadAnd<
+    TruncatePaintLayers,
+    BoxedSystemEffect<
+        Query<'static, 'static, (Entity, &'static PaintedMesh)>,
+        Vec<EntityCommandDespawn>,
+    >,
+> {
+    messages_read_and(
+        |&TruncatePaintLayers { layer }| -> BoxedSystemEffect<_, _> {
+            Box::new(move |paint_layers: Query<(Entity, &PaintedMesh)>| {
+                paint_layers
+                    .iter()
+                    .filter(|(_, painted_mesh)| *painted_mesh.paint_layer >= layer.0)
+                    .map(|(entity, _)| entity)
+                    .map(entity_command_despawn)
+                    .collect()
+            })
+        },
+    )
 }
 
 fn track_transform_for_paintable_meshes(
