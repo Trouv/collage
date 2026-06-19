@@ -18,7 +18,7 @@ opt-level = 3
 bevy = { version = "0.18", features = ["jpeg"] }
 bevy-inspector-egui = { version = "0.36.0", optional = true }
 bevy_asset_loader = "0.25.0"
-bevy_pipe_affect = { version = "0.3", features = ["asset", "derive"] }
+bevy_pipe_affect = { git = "https://github.com/Trouv/bevy_pipe_affect", features = ["asset", "derive"], branch = "feat/system" }
 bevy_skein = "0.5.0"
 clap = { version = "4.5.53", features = ["derive", "env"] }
 leafwing-input-manager = "0.20.0"
