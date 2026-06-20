@@ -4,12 +4,16 @@ use bevy::prelude::*;
 use bevy_pipe_affect::prelude::*;
 use leafwing_input_manager::prelude::*;
 
+/// This is essentially creating a mapping from a marker type to an action value.
+///
+/// An action value being, not an action type, but a particular variant of the action type.
 trait TimeableButton {
     type Action: Actionlike;
 
     const BUTTON: Self::Action;
 }
 
+/// Plugin for creating and ticking timers when buttons are pressed.
 #[derive(Clone, Default, Debug, PartialEq, Eq, Reflect, Message)]
 struct ButtonTimerPlugin<TB>
 where
