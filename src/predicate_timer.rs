@@ -1,80 +1,50 @@
 use core::iter::{RepeatN, repeat_n};
-use core::marker::PhantomData;
 
 use bevy::prelude::*;
 use bevy_pipe_affect::prelude::*;
 
-/// Plugin for creating and ticking timers while a predicate is true
-#[derive(Clone, Debug, PartialEq, Eq, Reflect, Message)]
-struct PredicateTimerPlugin<P, M>
+/// Add "plugin" for creating and ticking timers while a predicate is true
+///
+/// Returns the "timer entity" that will be used to store the timer and trigger events.
+pub fn add_predicate_timer<P, M>(app: &mut App, initial_timer: Timer, predicate_system: P) -> Entity
 where
     P: SystemParamFunction<M, In = (), Out = bool>,
-{
-    /// The initial value of a timer when the predicate switches to true.
-    initial_timer: Timer,
-    /// The entity who the timer will belong, and that will be targeted by
-    /// [`PredicateTimerFinished`].
-    timer_entity: Entity,
-    /// The system returning bool that will be the predicate.
-    predicate_system: P,
-    marker: PhantomData<M>,
-}
-
-pub fn app_with_predicate_timer_plugin<P, M>(
-    mut app: App,
-    initial_timer: Timer,
-    predicate_system: P,
-) -> (App, Entity)
-where
-    P: SystemParamFunction<M, In = (), Out = bool> + Clone,
     M: Send + Sync + 'static,
 {
     let timer_entity = app.world_mut().spawn(PredicateTimerEntity).id();
 
-    app.add_plugins(PredicateTimerPlugin {
-        initial_timer,
-        timer_entity,
-        predicate_system,
-        marker: PhantomData,
-    });
+    app.add_systems(
+        Update,
+        (
+            predicate_system
+                .pipe(predicate_timer_transition_system(
+                    timer_entity,
+                    initial_timer,
+                ))
+                .pipe(affect),
+            predicate_timer_finished_trigger(timer_entity).pipe(affect),
+        )
+            .chain(),
+    );
 
-    (app, timer_entity)
+    timer_entity
 }
 
-impl<P, M> Plugin for PredicateTimerPlugin<P, M>
-where
-    P: SystemParamFunction<M, In = (), Out = bool> + Clone,
-    M: Sync + Send + 'static,
-{
-    fn build(&self, app: &mut App) {
-        app.add_systems(
-            Update,
-            (
-                self.predicate_system
-                    .clone()
-                    .pipe(predicate_timer_transition_system(
-                        self.timer_entity,
-                        self.initial_timer.clone(),
-                    ))
-                    .pipe(affect),
-                predicate_timer_finished_trigger(self.timer_entity).pipe(affect),
-            )
-                .chain(),
-        );
-    }
-}
-
+/// Event that is triggered when a predicate timer is finished.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Reflect, EntityEvent)]
-struct PredicateTimerFinished {
-    entity: Entity,
+pub struct PredicateTimerFinished {
+    /// The timer entity that finished.
+    pub entity: Entity,
 }
 
+/// Marker for all predicate timers, regardless of if they are currently timing.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Reflect, Component)]
 #[require(Name = "PredicateTimerEntity")]
-struct PredicateTimerEntity;
+pub struct PredicateTimerEntity;
 
+/// Component that stores the predicate timer, only exists while the predicate is true.
 #[derive(Clone, Default, Debug, PartialEq, Eq, Reflect, Resource, Component, Deref, DerefMut)]
-struct PredicateTimer(Timer);
+pub struct PredicateTimer(Timer);
 
 #[derive(Clone, PartialEq, Eq, Debug, Effect)]
 enum PredicateTimerTransition {
