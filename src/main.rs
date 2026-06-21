@@ -18,7 +18,7 @@ mod state;
 
 mod clear_skies;
 
-mod button_timer;
+mod predicate_timer;
 
 mod args;
 
