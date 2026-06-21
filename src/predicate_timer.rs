@@ -20,6 +20,27 @@ where
     marker: PhantomData<M>,
 }
 
+pub fn app_with_predicate_timer_plugin<P, M>(
+    mut app: App,
+    initial_timer: Timer,
+    predicate_system: P,
+) -> (App, Entity)
+where
+    P: SystemParamFunction<M, In = (), Out = bool> + Clone,
+    M: Send + Sync + 'static,
+{
+    let timer_entity = app.world_mut().spawn(PredicateTimerEntity).id();
+
+    app.add_plugins(PredicateTimerPlugin {
+        initial_timer,
+        timer_entity,
+        predicate_system,
+        marker: PhantomData,
+    });
+
+    (app, timer_entity)
+}
+
 impl<P, M> Plugin for PredicateTimerPlugin<P, M>
 where
     P: SystemParamFunction<M, In = (), Out = bool> + Clone,
@@ -47,6 +68,10 @@ where
 struct PredicateTimerFinished {
     entity: Entity,
 }
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Reflect, Component)]
+#[require(Name = "PredicateTimerEntity")]
+struct PredicateTimerEntity;
 
 #[derive(Clone, Default, Debug, PartialEq, Eq, Reflect, Resource, Component, Deref, DerefMut)]
 struct PredicateTimer(Timer);
