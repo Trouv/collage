@@ -20,6 +20,8 @@ mod clear_skies;
 
 mod predicate_timer;
 
+mod button_predicate;
+
 mod args;
 
 #[cfg(feature = "dev")]
