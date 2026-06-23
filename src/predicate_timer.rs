@@ -55,7 +55,7 @@ pub struct PredicateTimerFinished {
 }
 
 /// Component that stores the predicate timer, only exists while the predicate is true.
-#[derive(Clone, Debug, PartialEq, Eq, Reflect, Resource, Component)]
+#[derive(Clone, Debug, PartialEq, Eq, Reflect, Component)]
 #[require(Name = "PredicateTimer")]
 pub enum PredicateTimer {
     /// The timer is currently running (because the predicate is true).
