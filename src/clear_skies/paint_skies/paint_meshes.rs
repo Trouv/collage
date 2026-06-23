@@ -1,6 +1,7 @@
 use std::time::Duration;
 
 use bevy::camera::visibility::RenderLayers;
+use bevy::image::BevyDefault;
 use bevy::prelude::*;
 use bevy::render::render_resource::TextureFormat;
 use bevy::render::view::screenshot::{Screenshot, ScreenshotCaptured};
@@ -79,7 +80,8 @@ impl Plugin for PaintMeshesPlugin {
                         .pipe(affect)
                         .after(RecordPaintLayerHistorySet)
                         .run_if(
-                            in_state(ClearSkiesState::PaintSkies).and(on_message::<RecordPresent>),
+                            in_state(ClearSkiesState::PaintSkies)
+                                .and_then(on_message::<RecordPresent>),
                         ),
                     (truncate_paint_layers_meshes
                         .pipe(affect)
@@ -146,7 +148,7 @@ fn track_transform_for_paintable_meshes(
 }
 
 /// Index for the paint mesh layer.
-#[derive(Default, Debug, PartialEq, Eq, Copy, Clone, Hash, Reflect, Deref, DerefMut, Component)]
+#[derive(Default, Debug, PartialEq, Eq, Copy, Clone, Hash, Reflect, Deref, DerefMut)]
 pub struct LayerIndex(pub u32);
 
 /// Settings for the logic of painting layers.

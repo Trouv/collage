@@ -13,10 +13,13 @@ pub struct GltfAssetNotStrongPath;
 /// A dummy scene for prototyping..
 pub fn spawn_scene(
     assets: Res<ClearSkiesAssetCollection>,
-) -> Result<AssetServerLoadAnd<'static, Scene, CommandSpawn<SceneRoot>>, GltfAssetNotStrongPath> {
+) -> Result<
+    AssetServerLoadAnd<'static, WorldAsset, CommandSpawn<WorldAssetRoot>>,
+    GltfAssetNotStrongPath,
+> {
     Ok(asset_server_load_and(
         GltfAssetLabel::Scene(0).from_asset(assets.cube.path().ok_or(GltfAssetNotStrongPath)?),
-        |handle| command_spawn(SceneRoot(handle.clone())),
+        |handle| command_spawn(WorldAssetRoot(handle.clone())),
     ))
 }
 
