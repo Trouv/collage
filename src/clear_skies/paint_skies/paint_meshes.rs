@@ -7,6 +7,7 @@ use bevy::render::view::screenshot::{Screenshot, ScreenshotCaptured};
 use bevy_pipe_affect::prelude::*;
 use leafwing_input_manager::prelude::*;
 
+use crate::button_predicate::add_button_timer;
 use crate::clear_skies::ClearSkiesState;
 use crate::clear_skies::camera::{ClearSkiesRenderTarget, ClearSkiesResolution, PaintSkiesAction};
 use crate::clear_skies::paint_skies::paint_layer_history::{
@@ -17,14 +18,21 @@ use crate::clear_skies::paint_skies::paint_layer_history::{
 use crate::clear_skies::paint_skies::triangle_with_uvs::{OctahedronWithUvs, TriangleWithUvs};
 use crate::clear_skies::play_skies::PlaySkiesCamera;
 use crate::clear_skies::render_layers::{PAINTABLE_LAYER, PAINTED_LAYER};
+use crate::predicate_timer::PredicateTimerFinished;
 
+/// Plugin responsible for creating layers of meshes on the background sky.
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, Hash, Reflect)]
 pub struct PaintMeshesPlugin;
 
 impl Plugin for PaintMeshesPlugin {
     fn build(&self, app: &mut App) {
+        let remove_paint_layer_timer = add_button_timer(
+            app,
+            Timer::new(Duration::from_millis(100), TimerMode::Repeating),
+            PaintSkiesAction::Remove,
+        );
+
         app.init_resource::<PaintMeshesTimer>()
-            .init_resource::<RemovePaintLayersTimer>()
             .init_resource::<PaintLayerSettings>()
             .init_resource::<LayerIndex>()
             .add_message::<ReadyToPaint>()
@@ -35,7 +43,16 @@ impl Plugin for PaintMeshesPlugin {
             ))
             .add_systems(
                 OnEnter(ClearSkiesState::Setup),
-                create_paint_skies_canvas.pipe(affect),
+                (
+                    create_paint_skies_canvas.pipe(affect),
+                    (move || {
+                        command_spawn(
+                            Observer::new(remove_paint_layers.pipe(affect))
+                                .with_entity(remove_paint_layer_timer),
+                        )
+                    })
+                    .pipe(affect),
+                ),
             )
             .register_type::<PaintSkiesCanvas>()
             .add_systems(
@@ -59,17 +76,9 @@ impl Plugin for PaintMeshesPlugin {
                         .run_if(
                             in_state(ClearSkiesState::PaintSkies).and(on_message::<ReadyToPaint>),
                         ),
-                    (
-                        (
-                            tick_remove_paint_layers_timer.pipe(affect),
-                            remove_paint_layers.pipe(affect),
-                        )
-                            // chained so that the remove_paint_layers catches all finished ticks
-                            .chain(),
-                        truncate_paint_layers_meshes
-                            .pipe(affect)
-                            .run_if(on_message::<TruncatePaintLayers>),
-                    )
+                    (truncate_paint_layers_meshes
+                        .pipe(affect)
+                        .run_if(on_message::<TruncatePaintLayers>),)
                         .run_if(in_state(ClearSkiesState::PaintSkies)),
                 ),
             );
@@ -101,34 +110,12 @@ fn tick_paint_meshes_timer(time: Res<Time>) -> ResSetWith<PaintMeshesTimer> {
     })
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Reflect, Deref, DerefMut, Resource)]
-struct RemovePaintLayersTimer(Timer);
-
-impl Default for RemovePaintLayersTimer {
-    fn default() -> Self {
-        RemovePaintLayersTimer(Timer::new(Duration::from_millis(100), TimerMode::Repeating))
-    }
-}
-
-fn tick_remove_paint_layers_timer(time: Res<Time>) -> ResSetWith<RemovePaintLayersTimer> {
-    let delta_time = time.delta();
-
-    res_set_with(move |timer: &RemovePaintLayersTimer| {
-        let mut timer = timer.clone();
-        timer.tick(delta_time);
-        timer
-    })
-}
-
 fn remove_paint_layers(
-    timer: Res<RemovePaintLayersTimer>,
-    paint_action_query: Single<&ActionState<PaintSkiesAction>>,
+    _: On<PredicateTimerFinished>,
     layer_index: Res<LayerIndex>,
-) -> Option<(MessageWrite<TruncatePaintLayers>, ResSet<LayerIndex>)> {
-    (timer.just_finished() && paint_action_query.pressed(&PaintSkiesAction::Remove)).then(|| {
-        let layer = LayerIndex(layer_index.0.saturating_sub(1));
-        (message_write(TruncatePaintLayers { layer }), res_set(layer))
-    })
+) -> (MessageWrite<TruncatePaintLayers>, ResSet<LayerIndex>) {
+    let layer = LayerIndex(layer_index.0.saturating_sub(1));
+    (message_write(TruncatePaintLayers { layer }), res_set(layer))
 }
 
 fn truncate_paint_layers_meshes() -> MessagesReadAnd<
