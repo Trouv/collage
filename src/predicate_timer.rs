@@ -11,7 +11,7 @@ where
     P: SystemParamFunction<M, In = (), Out = bool>,
     M: Send + Sync + 'static,
 {
-    let timer_entity = app.world_mut().spawn(PredicateTimerEntity).id();
+    let timer_entity = app.world_mut().spawn(PredicateTimer::Waiting).id();
 
     app.add_systems(
         Update,
@@ -37,38 +37,33 @@ pub struct PredicateTimerFinished {
     pub entity: Entity,
 }
 
-/// Marker for all predicate timers, regardless of if they are currently timing.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Reflect, Component)]
-#[require(Name = "PredicateTimerEntity")]
-pub struct PredicateTimerEntity;
-
 /// Component that stores the predicate timer, only exists while the predicate is true.
-#[derive(Clone, Default, Debug, PartialEq, Eq, Reflect, Resource, Component, Deref, DerefMut)]
-pub struct PredicateTimer(Timer);
-
-#[derive(Clone, PartialEq, Eq, Debug, Effect)]
-enum PredicateTimerTransition {
-    Tick(QueryEntityAffect<ComponentSet<PredicateTimer>>),
-    Start(EntityCommandInsert<PredicateTimer>),
-    Stop(EntityCommandRemove<PredicateTimer>),
-    Wait,
+#[derive(Clone, Debug, PartialEq, Eq, Reflect, Resource, Component)]
+#[require(Name = "PredicateTimer")]
+pub enum PredicateTimer {
+    Ticking(Timer),
+    Waiting,
 }
 
 fn predicate_timer_transition_system(
     entity: Entity,
     initial_timer: Timer,
-) -> impl Fn(In<bool>, Query<&PredicateTimer>, Res<Time>) -> PredicateTimerTransition {
-    move |In(p), predicate_timers, time| match (p, predicate_timers.get(entity)) {
-        (true, Ok(timer)) => PredicateTimerTransition::Tick(query_entity_affect(
-            entity,
-            component_set(PredicateTimer(timer.clone().tick(time.delta()).clone())),
-        )),
-        (true, Err(_)) => PredicateTimerTransition::Start(entity_command_insert(
-            entity,
-            PredicateTimer(initial_timer.clone()),
-        )),
-        (false, Ok(_)) => PredicateTimerTransition::Stop(entity_command_remove(entity)),
-        (false, _) => PredicateTimerTransition::Wait,
+) -> impl Fn(In<bool>, Res<Time>) -> QueryEntityMap<&'static PredicateTimer, ComponentSet<PredicateTimer>>
+{
+    move |In(p), time| {
+        let delta = time.delta();
+        let initial_timer = initial_timer.clone();
+        query_entity_map(entity, move |predicate_timer: &PredicateTimer| {
+            let new_value = match (p, predicate_timer) {
+                (true, PredicateTimer::Ticking(timer)) => {
+                    PredicateTimer::Ticking(timer.clone().tick(delta).clone())
+                }
+                (true, PredicateTimer::Waiting) => PredicateTimer::Ticking(initial_timer.clone()),
+                (false, _) => PredicateTimer::Waiting,
+            };
+
+            component_set(new_value)
+        })
     }
 }
 
@@ -79,6 +74,11 @@ fn predicate_timer_finished_trigger(
     move |query| {
         let times_finished = query
             .get(entity)
+            .ok()
+            .and_then(|timer| match timer {
+                PredicateTimer::Ticking(timer) => Some(timer),
+                _ => None,
+            })
             .map(|timer| timer.times_finished_this_tick())
             .unwrap_or_default();
 
