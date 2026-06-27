@@ -255,16 +255,21 @@ fn paint_canvas(
     render_target: Res<ClearSkiesRenderTarget>,
 ) -> Option<CommandSpawnAnd<Screenshot, (CommandSpawn<Observer>, CommandSpawn<Observer>)>> {
     if timer.just_finished() {
-        let effect = command_spawn_and(Screenshot::image((**render_target).clone()), |entity| {
-            (
-                command_spawn(Observer::new(
-                    trigger_paint_layer_if_recent_input.pipe(affect),
-                )),
-                command_spawn(
-                    Observer::new(save_screenshot_to_canvas.pipe(affect)).with_entity(entity),
-                ),
-            )
-        });
+        let effect = command_spawn_and(
+            Screenshot::image((**render_target).clone()),
+            |screenshot_entity| {
+                (
+                    command_spawn(
+                        Observer::new(trigger_paint_layer_if_recent_input.pipe(affect))
+                            .with_entity(screenshot_entity),
+                    ),
+                    command_spawn(
+                        Observer::new(save_screenshot_to_canvas.pipe(affect))
+                            .with_entity(screenshot_entity),
+                    ),
+                )
+            },
+        );
 
         Some(effect)
     } else {
