@@ -7,7 +7,7 @@ use bevy::render::view::screenshot::{Screenshot, ScreenshotCaptured};
 use bevy_pipe_affect::prelude::*;
 use leafwing_input_manager::prelude::*;
 
-use crate::button_predicate::add_button_timer;
+use crate::button_predicate::{self, add_button_timer, button_predicate};
 use crate::clear_skies::ClearSkiesState;
 use crate::clear_skies::camera::{ClearSkiesRenderTarget, ClearSkiesResolution, PaintSkiesAction};
 use crate::clear_skies::paint_skies::paint_layer_history::{
@@ -18,7 +18,7 @@ use crate::clear_skies::paint_skies::paint_layer_history::{
 use crate::clear_skies::paint_skies::triangle_with_uvs::{OctahedronWithUvs, TriangleWithUvs};
 use crate::clear_skies::play_skies::PlaySkiesCamera;
 use crate::clear_skies::render_layers::{PAINTABLE_LAYER, PAINTED_LAYER};
-use crate::predicate_timer::PredicateTimerFinished;
+use crate::predicate_timer::{PredicateTimerFinished, add_predicate_timer};
 
 /// Plugin responsible for creating layers of meshes on the background sky.
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, Hash, Reflect)]
@@ -30,6 +30,12 @@ impl Plugin for PaintMeshesPlugin {
             app,
             Timer::new(Duration::from_millis(100), TimerMode::Repeating),
             PaintSkiesAction::Remove,
+        );
+
+        let add_layer_timer = add_predicate_timer(
+            app,
+            Timer::new(Duration::from_millis(100), TimerMode::Repeating),
+            paint_recently_pressed,
         );
 
         app.init_resource::<PaintMeshesTimer>()
@@ -223,6 +229,26 @@ fn save_screenshot_to_canvas(
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Default, Message)]
 pub struct ReadyToPaint;
 
+fn paint_recently_pressed(
+    paint_action_query: Single<(
+        &ActionState<PaintSkiesAction>,
+        &PaintableHistory<ActionState<PaintSkiesAction>>,
+    )>,
+    layer_index: Res<LayerIndex>,
+    paint_layer_settings: Res<PaintLayerSettings>,
+) -> bool {
+    let (paint_action, paint_action_history) = *paint_action_query;
+    !paint_action.pressed(&PaintSkiesAction::Remove)
+        && (paint_action.pressed(&PaintSkiesAction::Paint)
+            || ((0..paint_layer_settings.max_empty_layers)
+                .map(|offset| {
+                    paint_action_history.get(LayerIndex(layer_index.0.saturating_sub(offset)))
+                })
+                .any(|action| {
+                    action.is_some_and(|action| action.pressed(&PaintSkiesAction::Paint))
+                })))
+}
+
 fn trigger_paint_layer_if_recent_input(
     _: On<ScreenshotCaptured>,
     paint_action_query: Single<(
@@ -232,18 +258,7 @@ fn trigger_paint_layer_if_recent_input(
     layer_index: Res<LayerIndex>,
     paint_layer_settings: Res<PaintLayerSettings>,
 ) -> Option<MessageWrite<ReadyToPaint>> {
-    let (paint_action, paint_action_history) = *paint_action_query;
-
-    if !paint_action.pressed(&PaintSkiesAction::Remove)
-        && (paint_action.pressed(&PaintSkiesAction::Paint)
-            || ((0..paint_layer_settings.max_empty_layers)
-                .map(|offset| {
-                    paint_action_history.get(LayerIndex(layer_index.0.saturating_sub(offset)))
-                })
-                .any(|action| {
-                    action.is_some_and(|action| action.pressed(&PaintSkiesAction::Paint))
-                })))
-    {
+    if paint_recently_pressed(paint_action_query, layer_index, paint_layer_settings) {
         Some(message_write(ReadyToPaint))
     } else {
         None
