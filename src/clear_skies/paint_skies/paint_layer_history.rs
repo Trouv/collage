@@ -6,6 +6,10 @@ use bevy_pipe_affect::prelude::*;
 
 use crate::clear_skies::paint_skies::paint_meshes::{LayerIndex, ReadyToPaint};
 
+/// System set for systems that modify paint layer history.
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Default, Hash, SystemSet)]
+pub struct RecordPaintLayerHistorySet;
+
 /// Plugin that tracks the history of a component at previous paint layers.
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Default)]
 pub struct PaintLayerHistoryPlugin<C>(PhantomData<C>);
@@ -18,13 +22,15 @@ where
         app.register_type::<PaintableHistory<C>>().add_systems(
             Update,
             (
-                record_history::<C>
-                    .pipe(affect)
-                    .run_if(on_message::<ReadyToPaint>),
                 truncate_history::<C>
                     .pipe(affect)
                     .run_if(on_message::<TruncatePaintLayers>),
-            ),
+                record_history::<C>
+                    .pipe(affect)
+                    .run_if(on_message::<ReadyToPaint>),
+            )
+                .chain()
+                .in_set(RecordPaintLayerHistorySet),
         );
     }
 }
