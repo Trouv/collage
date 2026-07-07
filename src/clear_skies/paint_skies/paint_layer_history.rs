@@ -157,7 +157,7 @@ where
 #[derive(Clone, PartialEq, Eq, Debug, Default, Component, Reflect)]
 #[reflect(Component)]
 #[require(Name = "HistoryUnit", PaintableHistory<HistoryUnit>)]
-struct HistoryUnit;
+pub struct HistoryUnit;
 
 /// System that returns the last layer index in the history. Pipe this into a system
 /// `.after(RecordPaintLayerHistorySet)` to respond to [`ReadyToPaint`] events if you need to know
