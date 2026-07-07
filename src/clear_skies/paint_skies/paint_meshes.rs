@@ -7,7 +7,7 @@ use bevy::render::view::screenshot::{Screenshot, ScreenshotCaptured};
 use bevy_pipe_affect::prelude::*;
 use leafwing_input_manager::prelude::*;
 
-use crate::button_predicate::{self, add_button_timer, button_predicate};
+use crate::button_predicate::add_button_timer;
 use crate::clear_skies::ClearSkiesState;
 use crate::clear_skies::camera::{ClearSkiesRenderTarget, ClearSkiesResolution, PaintSkiesAction};
 use crate::clear_skies::paint_skies::paint_layer_history::{
