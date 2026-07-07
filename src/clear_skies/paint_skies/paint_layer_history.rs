@@ -4,17 +4,19 @@ use bevy::prelude::*;
 use bevy::reflect::{FromReflect, GetTypeRegistration, Typed};
 use bevy_pipe_affect::prelude::*;
 
+use crate::clear_skies::ClearSkiesState;
 use crate::clear_skies::paint_skies::paint_meshes::{LayerIndex, ReadyToPaint};
 
 /// System set for systems that modify paint layer history.
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Default, Hash, SystemSet)]
 pub struct RecordPaintLayerHistorySet;
 
-/// Plugin that tracks the history of a component at previous paint layers.
+/// Core plugin within [`PaintLayerHistoryPlugin`] that doesn't deal with the [`HistoryUnit`] to
+/// avoid infinite recursion.
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Default)]
-pub struct PaintLayerHistoryPlugin<C>(PhantomData<C>);
+struct PaintLayerHistoryPluginNoUnit<C>(PhantomData<C>);
 
-impl<C> Plugin for PaintLayerHistoryPlugin<C>
+impl<C> Plugin for PaintLayerHistoryPluginNoUnit<C>
 where
     C: Component + Typed + GetTypeRegistration + FromReflect + Clone + Send + Sync + 'static,
 {
@@ -32,6 +34,27 @@ where
                 .chain()
                 .in_set(RecordPaintLayerHistorySet),
         );
+    }
+}
+
+/// Plugin that tracks the history of a component at previous paint layers.
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Default)]
+pub struct PaintLayerHistoryPlugin<C>(PhantomData<C>);
+
+impl<C> Plugin for PaintLayerHistoryPlugin<C>
+where
+    C: Component + Typed + GetTypeRegistration + FromReflect + Clone + Send + Sync + 'static,
+{
+    fn build(&self, app: &mut App) {
+        if !app.is_plugin_added::<PaintLayerHistoryPluginNoUnit<HistoryUnit>>() {
+            app.add_systems(
+                OnEnter(ClearSkiesState::Setup),
+                (|| command_spawn(HistoryUnit)).pipe(affect),
+            )
+            .add_plugins(PaintLayerHistoryPluginNoUnit::<HistoryUnit>::default());
+        }
+
+        app.add_plugins(PaintLayerHistoryPluginNoUnit(self.0));
     }
 }
 
@@ -58,6 +81,13 @@ impl<C> PaintableHistory<C> {
         let relative_index_usize: usize = relative_index.try_into().ok()?;
 
         self.history.get(relative_index_usize)
+    }
+
+    /// Return the layer index of the last layer, if the history is non-empty.
+    pub fn last_layer_index(&self) -> Option<LayerIndex> {
+        let len = self.history.len();
+
+        (len > 0).then(|| LayerIndex(*self.initial_layer + len as u32))
     }
 
     /// Similar to `vec.iter().enumerate()`, returns an iterator that enumerates the history with `LayerIndex`es.
@@ -120,4 +150,24 @@ where
             component_set(paintable_history.clone().truncate(layer))
         })
     })
+}
+
+/// A unit type whose (trivial) history is tracked along with any others. Useful for understanding
+/// the universal history state, like with [`last_layer_index`].
+#[derive(Clone, PartialEq, Eq, Debug, Default, Component, Reflect)]
+#[reflect(Component)]
+#[require(Name = "HistoryUnit", PaintableHistory<HistoryUnit>)]
+struct HistoryUnit;
+
+/// System that returns the last layer index in the history. Pipe this into a system
+/// `.after(RecordPaintLayerHistorySet)` to respond to [`ReadyToPaint`] events if you need to know
+/// the newest layer index.
+///
+/// Previously, this information was stored as a resource, but I found it concerning dealing with
+/// the same "indexing" state in two different places that could potentially get out of sync if
+/// you're not really careful about scheduling..
+pub fn last_layer_index(
+    paintable_history: Single<&PaintableHistory<HistoryUnit>>,
+) -> Option<LayerIndex> {
+    paintable_history.last_layer_index()
 }
