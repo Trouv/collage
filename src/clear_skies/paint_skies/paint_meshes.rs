@@ -11,9 +11,11 @@ use crate::button_predicate::add_button_timer;
 use crate::clear_skies::ClearSkiesState;
 use crate::clear_skies::camera::{ClearSkiesRenderTarget, ClearSkiesResolution, PaintSkiesAction};
 use crate::clear_skies::paint_skies::paint_layer_history::{
+    HistoryUnit,
     PaintLayerHistoryPlugin,
     PaintableHistory,
     TruncatePaintLayers,
+    last_layer_index,
 };
 use crate::clear_skies::paint_skies::triangle_with_uvs::{OctahedronWithUvs, TriangleWithUvs};
 use crate::clear_skies::play_skies::PlaySkiesCamera;
@@ -40,9 +42,7 @@ impl Plugin for PaintMeshesPlugin {
 
         app.init_resource::<PaintMeshesTimer>()
             .init_resource::<PaintLayerSettings>()
-            .init_resource::<LayerIndex>()
             .add_message::<ReadyToPaint>()
-            .add_message::<TruncatePaintLayers>()
             .add_plugins((
                 PaintLayerHistoryPlugin::<GlobalTransform>::default(),
                 PaintLayerHistoryPlugin::<ActionState<PaintSkiesAction>>::default(),
@@ -74,14 +74,9 @@ impl Plugin for PaintMeshesPlugin {
                 Update,
                 (
                     track_transform_for_paintable_meshes.pipe(affect),
-                    (
-                        paint_meshes.pipe(affect),
-                        (|| res_set_with(|LayerIndex(i)| LayerIndex(i + 1))).pipe(affect),
-                    )
-                        .chain()
-                        .run_if(
-                            in_state(ClearSkiesState::PaintSkies).and(on_message::<ReadyToPaint>),
-                        ),
+                    last_layer_index.pipe(paint_meshes).pipe(affect).run_if(
+                        in_state(ClearSkiesState::PaintSkies).and(on_message::<ReadyToPaint>),
+                    ),
                     (truncate_paint_layers_meshes
                         .pipe(affect)
                         .run_if(on_message::<TruncatePaintLayers>),)
@@ -118,10 +113,10 @@ fn tick_paint_meshes_timer(time: Res<Time>) -> ResSetWith<PaintMeshesTimer> {
 
 fn remove_paint_layers(
     _: On<PredicateTimerFinished>,
-    layer_index: Res<LayerIndex>,
-) -> (MessageWrite<TruncatePaintLayers>, ResSet<LayerIndex>) {
-    let layer = LayerIndex(layer_index.0.saturating_sub(1));
-    (message_write(TruncatePaintLayers { layer }), res_set(layer))
+    history: Single<&PaintableHistory<HistoryUnit>>,
+) -> MessageWrite<TruncatePaintLayers> {
+    let layer = last_layer_index(history);
+    message_write(TruncatePaintLayers { layer })
 }
 
 fn truncate_paint_layers_meshes() -> MessagesReadAnd<
@@ -142,23 +137,15 @@ fn truncate_paint_layers_meshes() -> MessagesReadAnd<
 
 fn track_transform_for_paintable_meshes(
     meshes: Query<Entity, (With<Mesh3d>, Added<Paintable>)>,
-    layer_index: Res<LayerIndex>,
 ) -> Vec<EntityCommandInsert<PaintableHistory<GlobalTransform>>> {
     meshes
         .into_iter()
-        .map(|entity| {
-            entity_command_insert(
-                entity,
-                PaintableHistory::new_with_initial_layer(*layer_index),
-            )
-        })
+        .map(|entity| entity_command_insert(entity, PaintableHistory::default()))
         .collect()
 }
 
 /// Index for the paint mesh layer.
-#[derive(
-    Default, Debug, PartialEq, Eq, Copy, Clone, Hash, Reflect, Deref, DerefMut, Resource, Component,
-)]
+#[derive(Default, Debug, PartialEq, Eq, Copy, Clone, Hash, Reflect, Deref, DerefMut, Component)]
 pub struct LayerIndex(pub u32);
 
 /// Settings for the logic of painting layers.
@@ -234,7 +221,6 @@ fn paint_recently_pressed(
         &ActionState<PaintSkiesAction>,
         &PaintableHistory<ActionState<PaintSkiesAction>>,
     )>,
-    layer_index: Res<LayerIndex>,
     paint_layer_settings: Res<PaintLayerSettings>,
 ) -> bool {
     let (paint_action, paint_action_history) = *paint_action_query;
@@ -242,7 +228,13 @@ fn paint_recently_pressed(
         && (paint_action.pressed(&PaintSkiesAction::Paint)
             || ((0..paint_layer_settings.max_empty_layers)
                 .map(|offset| {
-                    paint_action_history.get(LayerIndex(layer_index.0.saturating_sub(offset)))
+                    paint_action_history.get(LayerIndex(
+                        paint_action_history
+                            .last_layer_index()
+                            .expect("TODO")
+                            .0
+                            .saturating_sub(offset),
+                    ))
                 })
                 .any(|action| {
                     action.is_some_and(|action| action.pressed(&PaintSkiesAction::Paint))
@@ -255,10 +247,9 @@ fn trigger_paint_layer_if_recent_input(
         &ActionState<PaintSkiesAction>,
         &PaintableHistory<ActionState<PaintSkiesAction>>,
     )>,
-    layer_index: Res<LayerIndex>,
     paint_layer_settings: Res<PaintLayerSettings>,
 ) -> Option<MessageWrite<ReadyToPaint>> {
-    if paint_recently_pressed(paint_action_query, layer_index, paint_layer_settings) {
+    if paint_recently_pressed(paint_action_query, paint_layer_settings) {
         Some(message_write(ReadyToPaint))
     } else {
         None
@@ -364,6 +355,7 @@ pub struct PaintedMesh {
 pub struct PaintedMeshes(Vec<Entity>);
 
 fn paint_meshes(
+    In(layer_index): In<LayerIndex>,
     paintable_meshes: Query<
         (
             Entity,
@@ -385,7 +377,6 @@ fn paint_meshes(
         With<Paintable>,
     >,
     play_skies_camera: Single<(&Camera, &GlobalTransform), With<PlaySkiesCamera>>,
-    layer_index: Res<LayerIndex>,
     paint_layer_settings: Res<PaintLayerSettings>,
     paint_skies_canvas: Res<PaintSkiesCanvas>,
 ) -> Vec<
@@ -414,7 +405,7 @@ fn paint_meshes(
     if !paint_action.pressed(&PaintSkiesAction::Paint) {
         vec![]
     } else {
-        let previous_layer_index = LayerIndex(layer_index.saturating_sub(1));
+        let previous_layer_index = LayerIndex(layer_index.0.saturating_sub(1));
         let previous_paint_pressed = paint_action_history
             .get(previous_layer_index)
             .is_some_and(|action_state| action_state.pressed(&PaintSkiesAction::Paint));
@@ -489,8 +480,6 @@ fn paint_meshes(
                                     ..StandardMaterial::from((**paint_skies_canvas).clone())
                                 };
 
-                                let paint_layer = *layer_index;
-
                                 Some(asset_add_and(mesh, move |mesh_handle| {
                                     asset_add_and(material, move |material_handle| {
                                         command_spawn((
@@ -501,7 +490,7 @@ fn paint_meshes(
                                             PaintedMesh {
                                                 painted_from: paintable_mesh_entity,
                                                 triangle_index,
-                                                paint_layer,
+                                                paint_layer: layer_index,
                                             },
                                         ))
                                     })

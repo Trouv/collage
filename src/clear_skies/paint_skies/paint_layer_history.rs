@@ -21,19 +21,22 @@ where
     C: Component + Typed + GetTypeRegistration + FromReflect + Clone + Send + Sync + 'static,
 {
     fn build(&self, app: &mut App) {
-        app.register_type::<PaintableHistory<C>>().add_systems(
-            Update,
-            (
-                truncate_history::<C>
-                    .pipe(affect)
-                    .run_if(on_message::<TruncatePaintLayers>),
-                record_history::<C>
-                    .pipe(affect)
-                    .run_if(on_message::<ReadyToPaint>),
-            )
-                .chain()
-                .in_set(RecordPaintLayerHistorySet),
-        );
+        app.register_type::<PaintableHistory<C>>()
+            .add_message::<TruncatePaintLayers>()
+            .add_message::<RecordPresent>()
+            .add_systems(
+                Update,
+                (
+                    truncate_history::<C>
+                        .pipe(affect)
+                        .run_if(on_message::<TruncatePaintLayers>),
+                    record_present::<C>
+                        .pipe(affect)
+                        .run_if(on_message::<RecordPresent>),
+                )
+                    .chain()
+                    .in_set(RecordPaintLayerHistorySet),
+            );
     }
 }
 
@@ -62,72 +65,78 @@ where
 #[derive(Clone, PartialEq, Eq, Debug, Default, Component, Reflect)]
 #[reflect(Component)]
 pub struct PaintableHistory<C> {
-    history: Vec<C>,
-    initial_layer: LayerIndex,
+    history: Vec<Option<C>>,
 }
 
 impl<C> PaintableHistory<C> {
-    /// Construct a new [`PaintableHistory`] with the given initial layer.
-    pub fn new_with_initial_layer(initial_layer: LayerIndex) -> Self {
-        PaintableHistory {
-            initial_layer,
-            history: vec![],
-        }
-    }
-
     /// Get the historical value of the component at this layer index.
     pub fn get(&self, LayerIndex(absolute_index): LayerIndex) -> Option<&C> {
-        let relative_index = absolute_index.checked_sub(self.initial_layer.0)?;
-        let relative_index_usize: usize = relative_index.try_into().ok()?;
-
-        self.history.get(relative_index_usize)
+        self.history.get(absolute_index as usize)?.as_ref()
     }
 
     /// Return the layer index of the last layer, if the history is non-empty.
     pub fn last_layer_index(&self) -> Option<LayerIndex> {
         let len = self.history.len();
 
-        (len > 0).then(|| LayerIndex(*self.initial_layer + len as u32))
+        (len > 0).then(|| LayerIndex(len as u32 - 1))
     }
 
     /// Similar to `vec.iter().enumerate()`, returns an iterator that enumerates the history with `LayerIndex`es.
     #[expect(dead_code)]
-    pub fn iter_enumerate_layers(&self) -> impl Iterator<Item = (LayerIndex, &C)> {
+    pub fn iter_enumerate_layers(&self) -> impl Iterator<Item = (LayerIndex, Option<&C>)> {
         self.history
             .iter()
             .enumerate()
-            .map(|(i, c)| (LayerIndex(self.initial_layer.0 + i as u32), c))
+            .map(|(i, c)| (LayerIndex(i as u32), c.as_ref()))
     }
 
     /// Returns this [`PaintableHistory`] with only the elements before layer n.
     pub fn truncate(self, LayerIndex(n): LayerIndex) -> Self {
-        let PaintableHistory {
-            initial_layer,
-            mut history,
-        } = self;
+        let PaintableHistory { mut history } = self;
 
-        let history_index = n.saturating_sub(initial_layer.0);
+        history.truncate(n as usize);
 
-        history.truncate(history_index as usize);
+        PaintableHistory { history }
+    }
 
-        PaintableHistory {
-            initial_layer,
-            history,
-        }
+    /// Returns this [`PaintableHistory`] with the given value/index as its new ending.
+    ///
+    /// If the layer index is lower than the current last layer index, the new history will be
+    /// truncated first.
+    ///
+    /// If the layer index is much higher than the current history length, the new history will
+    /// have `None`s in the interim.
+    pub fn with_end(self, n: LayerIndex, value: Option<C>) -> Self {
+        let PaintableHistory { mut history } = self.truncate(n);
+
+        history.extend(std::iter::repeat_with(|| None).take(n.0 as usize - history.len()));
+
+        history.push(value);
+
+        PaintableHistory { history }
     }
 }
+/// Send this message when you want to record a new layer.
+#[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Message)]
+pub struct RecordPresent {
+    /// The layer index to record as the new present.
+    pub layer: LayerIndex,
+}
 
-/// System that records the history of a component if it has a corresponding `PaintableHistory`
-/// component.
-fn record_history<C>()
--> QueryMap<(&'static PaintableHistory<C>, &'static C), ComponentSet<PaintableHistory<C>>>
+/// System that records the present value of a component into the history if it has a corresponding
+/// `PaintableHistory` component.
+fn record_present<C>() -> MessagesReadAnd<
+    RecordPresent,
+    QueryMap<(&'static PaintableHistory<C>, Option<&'static C>), ComponentSet<PaintableHistory<C>>>,
+>
 where
     C: Component + Clone,
 {
-    query_map(|(history, c): (&PaintableHistory<C>, &C)| {
-        let mut history = history.clone();
-        history.history.push(c.clone());
-        component_set(history)
+    messages_read_and(|RecordPresent { layer }| {
+        let layer = *layer;
+        query_map(move |(history, c): (&PaintableHistory<C>, Option<&C>)| {
+            component_set(history.clone().with_end(layer, c.cloned()))
+        })
     })
 }
 
@@ -160,14 +169,12 @@ where
 pub struct HistoryUnit;
 
 /// System that returns the last layer index in the history. Pipe this into a system
-/// `.after(RecordPaintLayerHistorySet)` to respond to [`ReadyToPaint`] events if you need to know
+/// `.after(RecordPaintLayerHistorySet)` to respond to [`RecordPresent`] events if you need to know
 /// the newest layer index.
 ///
 /// Previously, this information was stored as a resource, but I found it concerning dealing with
 /// the same "indexing" state in two different places that could potentially get out of sync if
 /// you're not really careful about scheduling..
-pub fn last_layer_index(
-    paintable_history: Single<&PaintableHistory<HistoryUnit>>,
-) -> Option<LayerIndex> {
-    paintable_history.last_layer_index()
+pub fn last_layer_index(paintable_history: Single<&PaintableHistory<HistoryUnit>>) -> LayerIndex {
+    paintable_history.last_layer_index().unwrap()
 }
