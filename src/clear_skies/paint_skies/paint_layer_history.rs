@@ -5,7 +5,7 @@ use bevy::reflect::{FromReflect, GetTypeRegistration, Typed};
 use bevy_pipe_affect::prelude::*;
 
 use crate::clear_skies::ClearSkiesState;
-use crate::clear_skies::paint_skies::paint_meshes::{LayerIndex, ReadyToPaint};
+use crate::clear_skies::paint_skies::paint_meshes::LayerIndex;
 
 /// System set for systems that modify paint layer history.
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Default, Hash, SystemSet)]
@@ -165,7 +165,7 @@ where
 /// the universal history state, like with [`last_layer_index`].
 #[derive(Clone, PartialEq, Eq, Debug, Default, Component, Reflect)]
 #[reflect(Component)]
-#[require(Name = "HistoryUnit", PaintableHistory<HistoryUnit>)]
+#[require(Name = "HistoryUnit", PaintableHistory::<HistoryUnit> { history: vec![Some(HistoryUnit)] })]
 pub struct HistoryUnit;
 
 /// System that returns the last layer index in the history. Pipe this into a system
@@ -177,4 +177,11 @@ pub struct HistoryUnit;
 /// you're not really careful about scheduling..
 pub fn last_layer_index(paintable_history: Single<&PaintableHistory<HistoryUnit>>) -> LayerIndex {
     paintable_history.last_layer_index().unwrap()
+}
+
+pub fn triggerable_last_layer_index<E: Event>(
+    _: On<E>,
+    paintable_history: Single<&PaintableHistory<HistoryUnit>>,
+) -> LayerIndex {
+    last_layer_index(paintable_history)
 }

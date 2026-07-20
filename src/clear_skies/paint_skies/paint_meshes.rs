@@ -14,13 +14,15 @@ use crate::clear_skies::paint_skies::paint_layer_history::{
     HistoryUnit,
     PaintLayerHistoryPlugin,
     PaintableHistory,
+    RecordPresent,
     TruncatePaintLayers,
     last_layer_index,
+    triggerable_last_layer_index,
 };
 use crate::clear_skies::paint_skies::triangle_with_uvs::{OctahedronWithUvs, TriangleWithUvs};
 use crate::clear_skies::play_skies::PlaySkiesCamera;
 use crate::clear_skies::render_layers::{PAINTABLE_LAYER, PAINTED_LAYER};
-use crate::predicate_timer::{PredicateTimerFinished, add_predicate_timer};
+use crate::predicate_timer::PredicateTimerFinished;
 
 /// Plugin responsible for creating layers of meshes on the background sky.
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, Hash, Reflect)]
@@ -34,15 +36,14 @@ impl Plugin for PaintMeshesPlugin {
             PaintSkiesAction::Remove,
         );
 
-        let add_layer_timer = add_predicate_timer(
-            app,
-            Timer::new(Duration::from_millis(100), TimerMode::Repeating),
-            paint_recently_pressed,
-        );
+        // let add_layer_timer = add_predicate_timer(
+        //     app,
+        //     Timer::new(Duration::from_millis(100), TimerMode::Repeating),
+        //     last_layer_index.pipe(paint_recently_pressed),
+        // );
 
         app.init_resource::<PaintMeshesTimer>()
             .init_resource::<PaintLayerSettings>()
-            .add_message::<ReadyToPaint>()
             .add_plugins((
                 PaintLayerHistoryPlugin::<GlobalTransform>::default(),
                 PaintLayerHistoryPlugin::<ActionState<PaintSkiesAction>>::default(),
@@ -75,7 +76,7 @@ impl Plugin for PaintMeshesPlugin {
                 (
                     track_transform_for_paintable_meshes.pipe(affect),
                     last_layer_index.pipe(paint_meshes).pipe(affect).run_if(
-                        in_state(ClearSkiesState::PaintSkies).and(on_message::<ReadyToPaint>),
+                        in_state(ClearSkiesState::PaintSkies).and(on_message::<RecordPresent>),
                     ),
                     (truncate_paint_layers_meshes
                         .pipe(affect)
@@ -212,11 +213,8 @@ fn save_screenshot_to_canvas(
     asset_insert(&**canvas, screenshot.image.clone())
 }
 
-/// Message that is sent when the screenshot for painting mesh UVs is ready.
-#[derive(Copy, Clone, PartialEq, Eq, Debug, Default, Message)]
-pub struct ReadyToPaint;
-
 fn paint_recently_pressed(
+    last_layer_index: LayerIndex,
     paint_action_query: Single<(
         &ActionState<PaintSkiesAction>,
         &PaintableHistory<ActionState<PaintSkiesAction>>,
@@ -228,13 +226,7 @@ fn paint_recently_pressed(
         && (paint_action.pressed(&PaintSkiesAction::Paint)
             || ((0..paint_layer_settings.max_empty_layers)
                 .map(|offset| {
-                    paint_action_history.get(LayerIndex(
-                        paint_action_history
-                            .last_layer_index()
-                            .expect("TODO")
-                            .0
-                            .saturating_sub(offset),
-                    ))
+                    paint_action_history.get(LayerIndex(last_layer_index.0.saturating_sub(offset)))
                 })
                 .any(|action| {
                     action.is_some_and(|action| action.pressed(&PaintSkiesAction::Paint))
@@ -242,15 +234,17 @@ fn paint_recently_pressed(
 }
 
 fn trigger_paint_layer_if_recent_input(
-    _: On<ScreenshotCaptured>,
+    In(last_layer_index): In<LayerIndex>,
     paint_action_query: Single<(
         &ActionState<PaintSkiesAction>,
         &PaintableHistory<ActionState<PaintSkiesAction>>,
     )>,
     paint_layer_settings: Res<PaintLayerSettings>,
-) -> Option<MessageWrite<ReadyToPaint>> {
-    if paint_recently_pressed(paint_action_query, paint_layer_settings) {
-        Some(message_write(ReadyToPaint))
+) -> Option<MessageWrite<RecordPresent>> {
+    if paint_recently_pressed(last_layer_index, paint_action_query, paint_layer_settings) {
+        Some(message_write(RecordPresent {
+            layer: LayerIndex(last_layer_index.0 + 1),
+        }))
     } else {
         None
     }
@@ -266,8 +260,12 @@ fn paint_canvas(
             |screenshot_entity| {
                 (
                     command_spawn(
-                        Observer::new(trigger_paint_layer_if_recent_input.pipe(affect))
-                            .with_entity(screenshot_entity),
+                        Observer::new(
+                            triggerable_last_layer_index::<ScreenshotCaptured>
+                                .pipe(trigger_paint_layer_if_recent_input)
+                                .pipe(affect),
+                        )
+                        .with_entity(screenshot_entity),
                     ),
                     command_spawn(
                         Observer::new(save_screenshot_to_canvas.pipe(affect))
