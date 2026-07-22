@@ -48,21 +48,31 @@ pub enum PredicateTimer {
 fn predicate_timer_transition_system(
     entity: Entity,
     initial_timer: Timer,
-) -> impl Fn(In<bool>, Res<Time>) -> QueryEntityMap<&'static PredicateTimer, ComponentSet<PredicateTimer>>
-{
+) -> impl Fn(
+    In<bool>,
+    Res<Time>,
+) -> QueryEntityMapAnd<
+    &'static PredicateTimer,
+    Option<CommandTrigger<PredicateTimerFinished>>,
+    ComponentSet<PredicateTimer>,
+> {
     move |In(p), time| {
         let delta = time.delta();
         let initial_timer = initial_timer.clone();
-        query_entity_map(entity, move |predicate_timer: &PredicateTimer| {
-            let new_value = match (p, predicate_timer) {
-                (true, PredicateTimer::Ticking(timer)) => {
-                    PredicateTimer::Ticking(timer.clone().tick(delta).clone())
-                }
-                (true, PredicateTimer::Waiting) => PredicateTimer::Ticking(initial_timer.clone()),
-                (false, _) => PredicateTimer::Waiting,
+        query_entity_map_and(entity, move |predicate_timer: &PredicateTimer| {
+            let (new_value, finished_command) = match (p, predicate_timer) {
+                (true, PredicateTimer::Ticking(timer)) => (
+                    PredicateTimer::Ticking(timer.clone().tick(delta).clone()),
+                    None,
+                ),
+                (true, PredicateTimer::Waiting) => (
+                    PredicateTimer::Ticking(initial_timer.clone()),
+                    Some(command_trigger(PredicateTimerFinished { entity })),
+                ),
+                (false, _) => (PredicateTimer::Waiting, None),
             };
 
-            component_set(new_value)
+            effect_out(finished_command, component_set(new_value))
         })
     }
 }
