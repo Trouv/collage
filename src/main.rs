@@ -22,6 +22,8 @@ mod predicate_timer;
 
 mod button_predicate;
 
+mod pipe_system;
+
 mod args;
 
 #[cfg(feature = "dev")]
