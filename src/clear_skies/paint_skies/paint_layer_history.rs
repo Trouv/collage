@@ -1,3 +1,4 @@
+use core::cmp::Ord;
 use std::marker::PhantomData;
 
 use bevy::prelude::*;
@@ -141,10 +142,27 @@ where
 }
 
 /// Send this message when you want to remove paint layers.
-#[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Message)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Message)]
 pub struct TruncatePaintLayers {
     /// The layer index to truncate at.
-    pub layer: LayerIndex,
+    layer: LayerIndex,
+}
+
+impl TruncatePaintLayers {
+    /// Constructs a new [`TruncatePaintLayers`], however, layer 0 is invalid (the length of
+    /// histories must always be 1+), so it is incremented.
+    pub fn new(LayerIndex(layer_index): LayerIndex) -> Self {
+        let layer_index = layer_index.max(1);
+
+        TruncatePaintLayers {
+            layer: LayerIndex(layer_index),
+        }
+    }
+
+    /// Returns an immutable reference to the internal `LayerIndex` value.
+    pub fn layer(&self) -> &LayerIndex {
+        &self.layer
+    }
 }
 
 fn truncate_history<C>() -> MessagesReadAnd<

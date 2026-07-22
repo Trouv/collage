@@ -14,6 +14,7 @@ use crate::clear_skies::paint_skies::paint_layer_history::{
     HistoryUnit,
     PaintLayerHistoryPlugin,
     PaintableHistory,
+    RecordPaintLayerHistorySet,
     RecordPresent,
     TruncatePaintLayers,
     last_layer_index,
@@ -22,7 +23,8 @@ use crate::clear_skies::paint_skies::paint_layer_history::{
 use crate::clear_skies::paint_skies::triangle_with_uvs::{OctahedronWithUvs, TriangleWithUvs};
 use crate::clear_skies::play_skies::PlaySkiesCamera;
 use crate::clear_skies::render_layers::{PAINTABLE_LAYER, PAINTED_LAYER};
-use crate::predicate_timer::PredicateTimerFinished;
+use crate::pipe_system::pipe;
+use crate::predicate_timer::{PredicateTimerFinished, add_predicate_timer};
 
 /// Plugin responsible for creating layers of meshes on the background sky.
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, Hash, Reflect)]
@@ -36,14 +38,13 @@ impl Plugin for PaintMeshesPlugin {
             PaintSkiesAction::Remove,
         );
 
-        // let add_layer_timer = add_predicate_timer(
-        //     app,
-        //     Timer::new(Duration::from_millis(100), TimerMode::Repeating),
-        //     last_layer_index.pipe(paint_recently_pressed),
-        // );
+        let add_layer_timer = add_predicate_timer(
+            app,
+            Timer::new(Duration::from_millis(100), TimerMode::Repeating),
+            pipe(last_layer_index, paint_recently_pressed),
+        );
 
-        app.init_resource::<PaintMeshesTimer>()
-            .init_resource::<PaintLayerSettings>()
+        app.init_resource::<PaintLayerSettings>()
             .add_plugins((
                 PaintLayerHistoryPlugin::<GlobalTransform>::default(),
                 PaintLayerHistoryPlugin::<ActionState<PaintSkiesAction>>::default(),
@@ -53,9 +54,15 @@ impl Plugin for PaintMeshesPlugin {
                 (
                     create_paint_skies_canvas.pipe(affect),
                     (move || {
-                        command_spawn(
-                            Observer::new(remove_paint_layers.pipe(affect))
-                                .with_entity(remove_paint_layer_timer),
+                        (
+                            command_spawn(
+                                Observer::new(paint_canvas.pipe(affect))
+                                    .with_entity(add_layer_timer),
+                            ),
+                            command_spawn(
+                                Observer::new(remove_paint_layers.pipe(affect))
+                                    .with_entity(remove_paint_layer_timer),
+                            ),
                         )
                     })
                     .pipe(affect),
@@ -63,21 +70,16 @@ impl Plugin for PaintMeshesPlugin {
             )
             .register_type::<PaintSkiesCanvas>()
             .add_systems(
-                Last,
-                (
-                    tick_paint_meshes_timer.pipe(affect),
-                    paint_canvas.pipe(affect),
-                )
-                    .chain()
-                    .run_if(in_state(ClearSkiesState::PaintSkies)),
-            )
-            .add_systems(
                 Update,
                 (
                     track_transform_for_paintable_meshes.pipe(affect),
-                    last_layer_index.pipe(paint_meshes).pipe(affect).run_if(
-                        in_state(ClearSkiesState::PaintSkies).and(on_message::<RecordPresent>),
-                    ),
+                    last_layer_index
+                        .pipe(paint_meshes)
+                        .pipe(affect)
+                        .after(RecordPaintLayerHistorySet)
+                        .run_if(
+                            in_state(ClearSkiesState::PaintSkies).and(on_message::<RecordPresent>),
+                        ),
                     (truncate_paint_layers_meshes
                         .pipe(affect)
                         .run_if(on_message::<TruncatePaintLayers>),)
@@ -93,38 +95,20 @@ impl Plugin for PaintMeshesPlugin {
 #[require(Mesh3d, RenderLayers = PAINTABLE_LAYER)]
 pub struct Paintable;
 
-#[derive(Debug, Clone, PartialEq, Eq, Reflect, Deref, DerefMut, Resource)]
-struct PaintMeshesTimer(Timer);
-
-impl Default for PaintMeshesTimer {
-    fn default() -> Self {
-        PaintMeshesTimer(Timer::new(Duration::from_millis(100), TimerMode::Repeating))
-    }
-}
-
-fn tick_paint_meshes_timer(time: Res<Time>) -> ResSetWith<PaintMeshesTimer> {
-    let delta_time = time.delta();
-
-    res_set_with(move |timer: &PaintMeshesTimer| {
-        let mut timer = timer.clone();
-        timer.tick(delta_time);
-        timer
-    })
-}
-
 fn remove_paint_layers(
     _: On<PredicateTimerFinished>,
     history: Single<&PaintableHistory<HistoryUnit>>,
 ) -> MessageWrite<TruncatePaintLayers> {
     let layer = last_layer_index(history);
-    message_write(TruncatePaintLayers { layer })
+    message_write(TruncatePaintLayers::new(layer))
 }
 
 fn truncate_paint_layers_meshes() -> MessagesReadAnd<
     TruncatePaintLayers,
     RunFnSystem<Query<'static, 'static, (Entity, &'static PaintedMesh)>, Vec<EntityCommandDespawn>>,
 > {
-    messages_read_and(|&TruncatePaintLayers { layer }| {
+    messages_read_and(|truncate_paint_layers: &TruncatePaintLayers| {
+        let layer = *truncate_paint_layers.layer();
         run_fn_system(move |paint_layers: Query<(Entity, &PaintedMesh)>| {
             paint_layers
                 .iter()
@@ -214,7 +198,7 @@ fn save_screenshot_to_canvas(
 }
 
 fn paint_recently_pressed(
-    last_layer_index: LayerIndex,
+    last_layer_index: In<LayerIndex>,
     paint_action_query: Single<(
         &ActionState<PaintSkiesAction>,
         &PaintableHistory<ActionState<PaintSkiesAction>>,
@@ -233,52 +217,35 @@ fn paint_recently_pressed(
                 })))
 }
 
-fn trigger_paint_layer_if_recent_input(
-    In(last_layer_index): In<LayerIndex>,
-    paint_action_query: Single<(
-        &ActionState<PaintSkiesAction>,
-        &PaintableHistory<ActionState<PaintSkiesAction>>,
-    )>,
-    paint_layer_settings: Res<PaintLayerSettings>,
-) -> Option<MessageWrite<RecordPresent>> {
-    if paint_recently_pressed(last_layer_index, paint_action_query, paint_layer_settings) {
-        Some(message_write(RecordPresent {
-            layer: LayerIndex(last_layer_index.0 + 1),
-        }))
-    } else {
-        None
-    }
+fn trigger_paint_layer(last_layer_index: In<LayerIndex>) -> MessageWrite<RecordPresent> {
+    message_write(RecordPresent {
+        layer: LayerIndex(last_layer_index.0.0 + 1),
+    })
 }
 
 fn paint_canvas(
-    timer: Res<PaintMeshesTimer>,
+    _: On<PredicateTimerFinished>,
     render_target: Res<ClearSkiesRenderTarget>,
-) -> Option<CommandSpawnAnd<Screenshot, (CommandSpawn<Observer>, CommandSpawn<Observer>)>> {
-    if timer.just_finished() {
-        let effect = command_spawn_and(
-            Screenshot::image((**render_target).clone()),
-            |screenshot_entity| {
-                (
-                    command_spawn(
-                        Observer::new(
-                            triggerable_last_layer_index::<ScreenshotCaptured>
-                                .pipe(trigger_paint_layer_if_recent_input)
-                                .pipe(affect),
-                        )
+) -> CommandSpawnAnd<Screenshot, (CommandSpawn<Observer>, CommandSpawn<Observer>)> {
+    command_spawn_and(
+        Screenshot::image((**render_target).clone()),
+        |screenshot_entity| {
+            (
+                command_spawn(
+                    Observer::new(
+                        triggerable_last_layer_index::<ScreenshotCaptured>
+                            .pipe(trigger_paint_layer)
+                            .pipe(affect),
+                    )
+                    .with_entity(screenshot_entity),
+                ),
+                command_spawn(
+                    Observer::new(save_screenshot_to_canvas.pipe(affect))
                         .with_entity(screenshot_entity),
-                    ),
-                    command_spawn(
-                        Observer::new(save_screenshot_to_canvas.pipe(affect))
-                            .with_entity(screenshot_entity),
-                    ),
-                )
-            },
-        );
-
-        Some(effect)
-    } else {
-        None
-    }
+                ),
+            )
+        },
+    )
 }
 
 fn triangle_projector_for_mesh_for_universe<'w>(
