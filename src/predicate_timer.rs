@@ -3,10 +3,26 @@ use core::iter::{RepeatN, repeat_n};
 use bevy::prelude::*;
 use bevy_pipe_affect::prelude::*;
 
+/// Should a predicate timer trigger at start or wait until the timer finishes the first time.
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
+pub enum StartBehavior {
+    /// The timer triggers at start.
+    #[default]
+    Trigger,
+    #[expect(dead_code)]
+    /// The timer doesn't trigger until it finishes.
+    NoTrigger,
+}
+
 /// Add "plugin" for creating and ticking timers while a predicate is true
 ///
 /// Returns the "timer entity" that will be used to store the timer and trigger events.
-pub fn add_predicate_timer<P, M>(app: &mut App, initial_timer: Timer, predicate_system: P) -> Entity
+pub fn add_predicate_timer<P, M>(
+    app: &mut App,
+    initial_timer: Timer,
+    start_behavior: StartBehavior,
+    predicate_system: P,
+) -> Entity
 where
     P: SystemParamFunction<M, In = (), Out = bool>,
     M: Send + Sync + 'static,
@@ -20,6 +36,7 @@ where
                 .pipe(predicate_timer_transition_system(
                     timer_entity,
                     initial_timer,
+                    start_behavior,
                 ))
                 .pipe(affect),
             predicate_timer_finished_trigger(timer_entity).pipe(affect),
@@ -48,6 +65,7 @@ pub enum PredicateTimer {
 fn predicate_timer_transition_system(
     entity: Entity,
     initial_timer: Timer,
+    start_behavior: StartBehavior,
 ) -> impl Fn(
     In<bool>,
     Res<Time>,
@@ -67,7 +85,8 @@ fn predicate_timer_transition_system(
                 ),
                 (true, PredicateTimer::Waiting) => (
                     PredicateTimer::Ticking(initial_timer.clone()),
-                    Some(command_trigger(PredicateTimerFinished { entity })),
+                    (start_behavior == StartBehavior::Trigger)
+                        .then_some(command_trigger(PredicateTimerFinished { entity })),
                 ),
                 (false, _) => (PredicateTimer::Waiting, None),
             };

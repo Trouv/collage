@@ -35,12 +35,14 @@ impl Plugin for PaintMeshesPlugin {
         let remove_paint_layer_timer = add_button_timer(
             app,
             Timer::new(Duration::from_millis(100), TimerMode::Repeating),
+            default(),
             PaintSkiesAction::Remove,
         );
 
         let add_layer_timer = add_predicate_timer(
             app,
             Timer::new(Duration::from_millis(100), TimerMode::Repeating),
+            default(),
             pipe(last_layer_index, paint_recently_pressed),
         );
 
