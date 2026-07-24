@@ -83,7 +83,6 @@ impl<C> PaintableHistory<C> {
     }
 
     /// Similar to `vec.iter().enumerate()`, returns an iterator that enumerates the history with `LayerIndex`es.
-    #[expect(dead_code)]
     pub fn iter_enumerate_layers(&self) -> impl Iterator<Item = (LayerIndex, Option<&C>)> {
         self.history
             .iter()
