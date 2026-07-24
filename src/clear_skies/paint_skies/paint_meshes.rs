@@ -11,7 +11,6 @@ use crate::button_predicate::add_button_timer;
 use crate::clear_skies::ClearSkiesState;
 use crate::clear_skies::camera::{ClearSkiesRenderTarget, ClearSkiesResolution, PaintSkiesAction};
 use crate::clear_skies::paint_skies::paint_layer_history::{
-    HistoryUnit,
     PaintLayerHistoryPlugin,
     PaintableHistory,
     RecordPaintLayerHistorySet,
@@ -99,10 +98,25 @@ pub struct Paintable;
 
 fn remove_paint_layers(
     _: On<PredicateTimerFinished>,
-    history: Single<&PaintableHistory<HistoryUnit>>,
+    history: Single<&PaintableHistory<ActionState<PaintSkiesAction>>>,
 ) -> MessageWrite<TruncatePaintLayers> {
-    let layer = last_layer_index(history);
-    message_write(TruncatePaintLayers::new(layer))
+    let last_layer_painted = history
+        .iter_enumerate_layers()
+        .collect::<Vec<_>>()
+        .iter()
+        .rev()
+        // skip 1 so at least 1 layer is always removed
+        .skip(1)
+        .find(|(_, action_state)| {
+            action_state.is_some_and(|action_state| action_state.pressed(&PaintSkiesAction::Paint))
+        })
+        .map(|(layer_index, _)| *layer_index)
+        .unwrap_or_default();
+
+    message_write(TruncatePaintLayers::new(LayerIndex(
+        // +1, because the index to keep is 1 less than the length to truncate to
+        last_layer_painted.0.saturating_add(1),
+    )))
 }
 
 fn truncate_paint_layers_meshes() -> MessagesReadAnd<
