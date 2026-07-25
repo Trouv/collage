@@ -167,6 +167,9 @@ impl Default for PaintLayerSettings {
     }
 }
 
+/// Resource pointing to the image that is "painted to" with screenshots.
+///
+/// Painted meshes use this image as a texture.
 #[derive(Default, Debug, PartialEq, Clone, Deref, DerefMut, Reflect, Resource)]
 #[reflect(Resource)]
 pub struct PaintSkiesCanvas(Handle<Image>);
