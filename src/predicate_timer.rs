@@ -58,7 +58,9 @@ pub struct PredicateTimerFinished {
 #[derive(Clone, Debug, PartialEq, Eq, Reflect, Resource, Component)]
 #[require(Name = "PredicateTimer")]
 pub enum PredicateTimer {
+    /// The timer is currently running (because the predicate is true).
     Ticking(Timer),
+    /// The timer is currently waiting (because the predicate is false).
     Waiting,
 }
 
