@@ -76,7 +76,7 @@ pub fn create_clear_skies_render_target(
     let mut image = Image::new_target_texture(
         resolution.x,
         resolution.y,
-        TextureFormat::bevy_default(),
+        TextureFormat::Rgba8UnormSrgb,
         None,
     );
 
