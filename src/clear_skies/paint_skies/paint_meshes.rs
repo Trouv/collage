@@ -1,8 +1,8 @@
 use std::time::Duration;
 
+use bevy::asset::RenderAssetUsages;
 use bevy::camera::visibility::RenderLayers;
-use bevy::image::BevyDefault;
-use bevy::prelude::*;
+use bevy::prelude::{Image, *};
 use bevy::render::render_resource::TextureFormat;
 use bevy::render::view::screenshot::{Screenshot, ScreenshotCaptured};
 use bevy_pipe_affect::prelude::*;
@@ -183,7 +183,7 @@ pub fn create_paint_skies_canvas(
     let image = Image::new_target_texture(
         resolution.x,
         resolution.y,
-        TextureFormat::bevy_default(),
+        TextureFormat::Rgba8UnormSrgb,
         None,
     );
 
@@ -215,7 +215,11 @@ fn save_screenshot_to_canvas(
     screenshot: On<ScreenshotCaptured>,
     canvas: Res<PaintSkiesCanvas>,
 ) -> AssetInsert<Image> {
-    asset_insert(&**canvas, screenshot.image.clone())
+    let image = Image {
+        asset_usage: RenderAssetUsages::RENDER_WORLD,
+        ..screenshot.image.clone()
+    };
+    asset_insert(&**canvas, image)
 }
 
 fn paint_recently_pressed(
