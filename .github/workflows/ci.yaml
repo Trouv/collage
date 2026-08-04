@@ -28,12 +28,10 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.toml') }}
-      - name: Install stable toolchain
-        uses: dtolnay/rust-toolchain@stable
-      - name: Install Dependencies
-        run: sudo apt-get update; sudo apt-get install --no-install-recommends libasound2-dev libudev-dev libwayland-dev
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
       - name: Run cargo test
-        run: cargo test
+        run: nix develop --command cargo test
 
   # Run cargo clippy -- -D warnings
   clippy_check:
@@ -53,14 +51,10 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-clippy-${{ hashFiles('**/Cargo.toml') }}
-      - name: Install stable toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy
-      - name: Install Dependencies
-        run: sudo apt-get update; sudo apt-get install --no-install-recommends libasound2-dev libudev-dev libwayland-dev
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
       - name: Run clippy
-        run: cargo clippy -- -D warnings
+        run: nix develop --command cargo clippy -- -D warnings
 
   # Run cargo fmt --all -- --check
   format:
@@ -70,9 +64,7 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
-      - name: Install stable toolchain
-        uses: dtolnay/rust-toolchain@nightly
-        with:
-          components: rustfmt
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
       - name: Run cargo fmt
-        run: cargo +nightly fmt --all -- --check
+        run: nix develop --command cargo fmt --all -- --check
