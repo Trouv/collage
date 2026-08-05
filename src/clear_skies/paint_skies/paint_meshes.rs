@@ -213,13 +213,12 @@ fn world_to_viewport_uv(
 
 fn save_screenshot_to_canvas(
     screenshot: On<ScreenshotCaptured>,
-    canvas: Res<PaintSkiesCanvas>,
-) -> AssetInsert<Image> {
+) -> AssetAddAnd<Image, ResSet<PaintSkiesCanvas>> {
     let image = Image {
         asset_usage: RenderAssetUsages::RENDER_WORLD,
         ..screenshot.image.clone()
     };
-    asset_insert(&**canvas, image)
+    asset_add_and(image, |handle| res_set(PaintSkiesCanvas(handle)))
 }
 
 fn paint_recently_pressed(
