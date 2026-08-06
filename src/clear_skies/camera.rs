@@ -3,7 +3,6 @@ use std::f32::consts::PI;
 use bevy::asset::RenderAssetUsages;
 use bevy::camera::RenderTarget;
 use bevy::camera::visibility::RenderLayers;
-use bevy::image::BevyDefault;
 use bevy::prelude::*;
 use bevy::render::render_resource::{TextureFormat, TextureUsages};
 use bevy_pipe_affect::prelude::{command_insert_resource, *};
