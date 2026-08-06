@@ -11,6 +11,7 @@ use bevy::reflect::GetTypeRegistration;
 use bevy_pipe_affect::prelude::*;
 use leafwing_input_manager::prelude::*;
 
+/// Plugin that re-assigns leafwing-input-manager input-maps to gamepads with input.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct SwitchGamepadsPlugin<A: Actionlike + TypePath + GetTypeRegistration>(PhantomData<A>);
 
