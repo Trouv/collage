@@ -1,5 +1,7 @@
 use clap::Parser;
 
+use crate::state::GameState;
+
 /// CLI arguments only available to dev builds of this game.
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, Hash, Parser)]
 pub struct DevArgs {
@@ -12,4 +14,6 @@ pub struct DevArgs {
     /// Add the ability to spawn a free camera with Ctrl+f.
     #[arg(short, long, env)]
     pub free_cam: bool,
+    #[arg(short, long, env)]
+    pub game_state: Option<GameState>,
 }

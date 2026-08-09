@@ -53,7 +53,7 @@ fn main() {
         SkeinPlugin::default(),
         ClearSkiesPlugin,
     ))
-    .init_state::<state::GameState>();
+    .insert_state(args.game_state.unwrap_or_default());
 
     if args.wireframe {
         app.add_plugins(WireframePlugin::default())
