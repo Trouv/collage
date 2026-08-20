@@ -26,6 +26,8 @@ mod pipe_system;
 
 mod args;
 
+mod cursor;
+
 #[cfg(feature = "dev")]
 mod toggle_free_camera;
 

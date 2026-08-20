@@ -8,6 +8,7 @@ use crate::clear_skies::paint_skies::paint_meshes::PaintMeshesPlugin;
 use crate::clear_skies::paint_skies::settings::PaintSkiesSettings;
 use crate::clear_skies::paint_skies::spherical_coords::look_at_spherical_coords;
 use crate::clear_skies::switch_gamepads::SwitchGamepadsPlugin;
+use crate::cursor::lock_cursor;
 
 /// Plugin that contains systems and settings related to the [`ClearSkiesState::PaintSkies`] state.
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, Hash, Reflect)]
@@ -25,8 +26,19 @@ impl Plugin for PaintSkiesPlugin {
             (
                 control_spherical_coords.pipe(affect),
                 look_at_spherical_coords.pipe(affect),
+                lock_cursor.pipe(affect),
             )
                 .run_if(in_state(ClearSkiesState::PaintSkies)),
+        )
+        .add_systems(
+            Startup,
+            (|| {
+                command_spawn(DirectionalLight {
+                    shadow_maps_enabled: true,
+                    ..default()
+                })
+            })
+            .pipe(affect),
         );
     }
 }
