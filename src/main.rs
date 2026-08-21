@@ -13,6 +13,7 @@ use clap::Parser;
 
 use crate::args::DevArgs;
 use crate::clear_skies::ClearSkiesPlugin;
+use crate::cursor::CursorLock;
 
 mod state;
 
@@ -55,6 +56,7 @@ fn main() {
         SkeinPlugin::default(),
         ClearSkiesPlugin,
     ))
+    .insert_resource(CursorLock::Lock)
     .insert_state(args.game_state.unwrap_or_default());
 
     if args.wireframe {
@@ -69,7 +71,8 @@ fn main() {
     {
         if args.inspector {
             app.add_plugins(EguiPlugin::default())
-                .add_plugins(WorldInspectorPlugin::new());
+                .add_plugins(WorldInspectorPlugin::new())
+                .insert_resource(CursorLock::Unlock);
         }
 
         if args.free_cam {
