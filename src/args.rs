@@ -14,6 +14,7 @@ pub struct DevArgs {
     /// Add the ability to spawn a free camera with Ctrl+f.
     #[arg(short, long, env)]
     pub free_cam: bool,
+    /// Set the initial state of the game.
     #[arg(short, long, env)]
     pub game_state: Option<GameState>,
 }
