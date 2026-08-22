@@ -57,7 +57,7 @@ fn spawn_or_despawn_free_cam(
             match free_cam {
                 None => {
                     let image =
-                        Image::new_target_texture(1, 1, TextureFormat::Bgra8UnormSrgb, None);
+                        Image::new_target_texture(1, 1, TextureFormat::Rgba8UnormSrgb, None);
 
                     SpawnOrDespawnFreeCamera::Spawn(asset_add_and(image, move |handle| {
                         command_spawn((
