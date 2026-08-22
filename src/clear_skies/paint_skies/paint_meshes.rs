@@ -1,5 +1,7 @@
 use std::time::Duration;
 
+use avian3d::collision::collider::Collider;
+use avian3d::dynamics::rigid_body::RigidBody;
 use bevy::asset::RenderAssetUsages;
 use bevy::camera::visibility::RenderLayers;
 use bevy::prelude::{Image, *};
@@ -327,6 +329,7 @@ fn triangle_projector_for_mesh_for_universe<'w>(
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Component, Reflect)]
 #[reflect(Component)]
 #[relationship(relationship_target = PaintedMeshes)]
+#[require(RigidBody::Static)]
 pub struct PaintedMesh {
     /// The entity whose mesh was used to paint this mesh.
     #[relationship]
@@ -379,6 +382,7 @@ fn paint_meshes(
                 Transform,
                 RenderLayers,
                 PaintedMesh,
+                Collider,
             )>,
         >,
     >,
@@ -459,6 +463,7 @@ fn paint_meshes(
                                     octahedron_with_uvs.centered();
 
                                 let mesh = Mesh::from(centered_octahedron);
+                                let collider = Collider::trimesh_from_mesh(&mesh)?;
 
                                 // Note: We don't need to adjust this relative to camera translation
                                 // since we already calculated it in world-space
@@ -481,6 +486,7 @@ fn paint_meshes(
                                                 triangle_index,
                                                 paint_layer: layer_index,
                                             },
+                                            collider,
                                         ))
                                     })
                                 }))
