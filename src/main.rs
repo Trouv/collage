@@ -1,6 +1,7 @@
 //! A collage of games.
 #![warn(missing_docs)]
 
+use avian3d::debug_render::PhysicsDebugPlugin;
 use bevy::asset::AssetMetaCheck;
 use bevy::pbr::wireframe::{WireframeConfig, WireframePlugin};
 use bevy::prelude::*;
@@ -65,6 +66,10 @@ fn main() {
                 global: true,
                 ..default()
             });
+    }
+
+    if args.physics_debug {
+        app.add_plugins(PhysicsDebugPlugin);
     }
 
     #[cfg(feature = "dev")]

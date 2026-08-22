@@ -17,4 +17,7 @@ pub struct DevArgs {
     /// Set the initial state of the game.
     #[arg(short, long, env)]
     pub game_state: Option<GameState>,
+    /// Enable physics debug plugin (similar to --wireframe, but for colliders)
+    #[arg(short, long, env)]
+    pub physics_debug: bool,
 }
