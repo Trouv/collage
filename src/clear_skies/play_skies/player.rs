@@ -43,5 +43,9 @@ fn spawn_player() -> CommandSpawn<(
         .with_dual_axis(PaintSkiesPlayerAction::Move, VirtualDPad::wasd())
         .with(PaintSkiesPlayerAction::Jump, KeyCode::Space)
         .with(PaintSkiesPlayerAction::Jump, GamepadButton::South);
-    command_spawn((ClearSkiesPlayer, Transform::default(), input_map))
+    command_spawn((
+        ClearSkiesPlayer,
+        Transform::from_xyz(0.0, 500.0, -750.0),
+        input_map,
+    ))
 }
