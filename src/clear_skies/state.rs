@@ -13,4 +13,5 @@ pub enum ClearSkiesState {
     Setup,
     /// The skybox is being drawn by the camera.
     PaintSkies,
+    PlaySkies,
 }
