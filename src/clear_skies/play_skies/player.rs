@@ -1,6 +1,5 @@
 use avian3d::collision::collider::Collider;
 use avian3d::dynamics::rigid_body::RigidBody;
-use avian3d::math::Scalar;
 use bevy::prelude::*;
 use bevy_pipe_affect::prelude::*;
 use leafwing_input_manager::prelude::*;
