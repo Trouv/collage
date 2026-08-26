@@ -14,6 +14,16 @@ impl Plugin for ClearSkiesPlayerPlugin {
         app.add_systems(
             OnEnter(ClearSkiesState::PlaySkies),
             spawn_player.pipe(affect),
+        )
+        .add_systems(
+            Update,
+            transition_to_paint_skies
+                .pipe(affect)
+                .run_if(in_state(ClearSkiesState::PlaySkies)),
+        )
+        .add_systems(
+            OnExit(ClearSkiesState::PlaySkies),
+            despawn_player.pipe(affect),
         );
     }
 }
@@ -28,6 +38,8 @@ pub enum PaintSkiesPlayerAction {
     Move,
     #[actionlike(Button)]
     Jump,
+    #[actionlike(Button)]
+    Transition,
 }
 
 fn spawn_player() -> CommandSpawn<(
@@ -42,10 +54,24 @@ fn spawn_player() -> CommandSpawn<(
         )
         .with_dual_axis(PaintSkiesPlayerAction::Move, VirtualDPad::wasd())
         .with(PaintSkiesPlayerAction::Jump, KeyCode::Space)
-        .with(PaintSkiesPlayerAction::Jump, GamepadButton::South);
+        .with(PaintSkiesPlayerAction::Jump, GamepadButton::South)
+        .with(PaintSkiesPlayerAction::Transition, GamepadButton::East)
+        .with(PaintSkiesPlayerAction::Transition, KeyCode::KeyC);
     command_spawn((
         ClearSkiesPlayer,
         Transform::from_xyz(0.0, 500.0, -750.0),
         input_map,
     ))
+}
+
+fn despawn_player(player: Single<Entity, With<ClearSkiesPlayer>>) -> EntityCommandDespawn {
+    entity_command_despawn(*player)
+}
+
+fn transition_to_paint_skies(
+    input: Single<&ActionState<PaintSkiesPlayerAction>>,
+) -> Option<ResSet<NextState<ClearSkiesState>>> {
+    input
+        .just_released(&PaintSkiesPlayerAction::Transition)
+        .then_some(res_set(NextState::Pending(ClearSkiesState::PaintSkies)))
 }
