@@ -41,6 +41,9 @@ impl Plugin for ClearSkiesCameraPlugin {
                 Update,
                 (
                     letterbox_or_pillarbox_viewport.pipe(affect),
+                    transition_to_play_skies
+                        .pipe(affect)
+                        .run_if(in_state(ClearSkiesState::PaintSkies)),
                     spawn_viewport
                         .pipe(affect)
                         .run_if(in_state(ClearSkiesState::Setup)),
@@ -103,6 +106,8 @@ pub enum PaintSkiesAction {
     /// Button input for removing layers.
     #[actionlike(Button)]
     Remove,
+    #[actionlike(Button)]
+    Transition,
 }
 
 /// Defines the paint skies camera.
@@ -121,6 +126,8 @@ pub fn spawn_paint_skies_camera(
         .with(PaintSkiesAction::Paint, KeyCode::Space)
         .with(PaintSkiesAction::Remove, GamepadButton::LeftTrigger)
         .with(PaintSkiesAction::Remove, KeyCode::KeyX)
+        .with(PaintSkiesAction::Transition, GamepadButton::East)
+        .with(PaintSkiesAction::Transition, KeyCode::KeyC)
         .with_dual_axis(
             PaintSkiesAction::Rotate,
             GamepadStick::LEFT.with_deadzone_symmetric(0.1),
@@ -200,4 +207,12 @@ pub fn letterbox_or_pillarbox_viewport(
             })
         }
     })
+}
+
+fn transition_to_play_skies(
+    input: Single<&ActionState<PaintSkiesAction>>,
+) -> Option<ResSet<NextState<ClearSkiesState>>> {
+    input
+        .just_released(&PaintSkiesAction::Transition)
+        .then_some(res_set(NextState::Pending(ClearSkiesState::PlaySkies)))
 }
