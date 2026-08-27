@@ -29,7 +29,11 @@ impl Plugin for ClearSkiesPlayerPlugin {
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Default, Debug, Component)]
-#[require(Name = "ClearSkiesPlayer", Collider::sphere(10f32), RigidBody::Dynamic)]
+#[require(
+    Name = "ClearSkiesPlayer",
+    Collider::capsule(5f32, 10f32),
+    RigidBody::Dynamic
+)]
 struct ClearSkiesPlayer;
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Hash, Reflect, Actionlike)]
