@@ -1,5 +1,5 @@
 use avian3d::collision::collider::Collider;
-use avian3d::dynamics::rigid_body::RigidBody;
+use avian3d::dynamics::rigid_body::{LockedAxes, RigidBody};
 use bevy::prelude::*;
 use bevy_pipe_affect::prelude::*;
 use leafwing_input_manager::prelude::*;
@@ -32,6 +32,7 @@ impl Plugin for ClearSkiesPlayerPlugin {
 #[require(
     Name = "ClearSkiesPlayer",
     Collider::capsule(5f32, 10f32),
+    LockedAxes::ROTATION_LOCKED,
     RigidBody::Dynamic
 )]
 struct ClearSkiesPlayer;
