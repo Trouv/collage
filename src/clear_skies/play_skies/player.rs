@@ -75,7 +75,7 @@ fn spawn_player() -> CommandSpawn<(
 }
 
 fn move_player(
-    camera: Single<&Camera, With<PlaySkiesCamera>>,
+    camera: Single<&Transform, With<PlaySkiesCamera>>,
     player: Single<(
         Entity,
         &LinearVelocity,
@@ -83,6 +83,7 @@ fn move_player(
     )>,
 ) -> QueryEntityAffect<ComponentSet<LinearVelocity>> {
     let (player_entity, current_velocity, input) = *player;
+
     let input_xz = input
         .dual_axis_data(&PaintSkiesPlayerAction::Move)
         .map(|dual_axis_data| dual_axis_data.pair)
@@ -90,7 +91,10 @@ fn move_player(
 
     let input_jump = input.pressed(&PaintSkiesPlayerAction::Jump);
 
-    let velocity_with_movement = current_velocity.with_xz(input_xz);
+    let direction = (input_xz.x * camera.right().xz().normalize())
+        + (input_xz.y * camera.forward().xz().normalize());
+
+    let velocity_with_movement = current_velocity.with_xz(direction);
 
     let velocity = if input_jump {
         velocity_with_movement.with_y(10.)
