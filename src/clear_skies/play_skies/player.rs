@@ -13,7 +13,7 @@ pub struct ClearSkiesPlayerPlugin;
 
 impl Plugin for ClearSkiesPlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(SwitchGamepadsPlugin::<PaintSkiesPlayerAction>::default())
+        app.add_plugins(SwitchGamepadsPlugin::<ClearSkiesPlayerAction>::default())
             .add_systems(
                 OnEnter(ClearSkiesState::PlaySkies),
                 spawn_player.pipe(affect),
@@ -43,7 +43,7 @@ impl Plugin for ClearSkiesPlayerPlugin {
 struct ClearSkiesPlayer;
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Hash, Reflect, Actionlike)]
-pub enum PaintSkiesPlayerAction {
+pub enum ClearSkiesPlayerAction {
     #[actionlike(DualAxis)]
     Move,
     #[actionlike(Button)]
@@ -55,18 +55,18 @@ pub enum PaintSkiesPlayerAction {
 fn spawn_player() -> CommandSpawn<(
     ClearSkiesPlayer,
     Transform,
-    InputMap<PaintSkiesPlayerAction>,
+    InputMap<ClearSkiesPlayerAction>,
 )> {
     let input_map = InputMap::default()
         .with_dual_axis(
-            PaintSkiesPlayerAction::Move,
+            ClearSkiesPlayerAction::Move,
             GamepadStick::LEFT.with_deadzone_symmetric(0.1),
         )
-        .with_dual_axis(PaintSkiesPlayerAction::Move, VirtualDPad::wasd())
-        .with(PaintSkiesPlayerAction::Jump, KeyCode::Space)
-        .with(PaintSkiesPlayerAction::Jump, GamepadButton::South)
-        .with(PaintSkiesPlayerAction::Transition, GamepadButton::East)
-        .with(PaintSkiesPlayerAction::Transition, KeyCode::KeyC);
+        .with_dual_axis(ClearSkiesPlayerAction::Move, VirtualDPad::wasd())
+        .with(ClearSkiesPlayerAction::Jump, KeyCode::Space)
+        .with(ClearSkiesPlayerAction::Jump, GamepadButton::South)
+        .with(ClearSkiesPlayerAction::Transition, GamepadButton::East)
+        .with(ClearSkiesPlayerAction::Transition, KeyCode::KeyC);
     command_spawn((
         ClearSkiesPlayer,
         Transform::from_xyz(0.0, 500.0, -750.0),
@@ -79,17 +79,17 @@ fn move_player(
     player: Single<(
         Entity,
         &LinearVelocity,
-        &ActionState<PaintSkiesPlayerAction>,
+        &ActionState<ClearSkiesPlayerAction>,
     )>,
 ) -> QueryEntityAffect<ComponentSet<LinearVelocity>> {
     let (player_entity, current_velocity, input) = *player;
 
     let input_xz = input
-        .dual_axis_data(&PaintSkiesPlayerAction::Move)
+        .dual_axis_data(&ClearSkiesPlayerAction::Move)
         .map(|dual_axis_data| dual_axis_data.pair)
         .unwrap_or_default();
 
-    let input_jump = input.pressed(&PaintSkiesPlayerAction::Jump);
+    let input_jump = input.pressed(&ClearSkiesPlayerAction::Jump);
 
     let direction = (input_xz.x * camera.right().xz().normalize())
         + (input_xz.y * camera.forward().xz().normalize());
@@ -112,9 +112,9 @@ fn despawn_player(player: Single<Entity, With<ClearSkiesPlayer>>) -> EntityComma
 }
 
 fn transition_to_paint_skies(
-    input: Single<&ActionState<PaintSkiesPlayerAction>>,
+    input: Single<&ActionState<ClearSkiesPlayerAction>>,
 ) -> Option<ResSet<NextState<ClearSkiesState>>> {
     input
-        .just_released(&PaintSkiesPlayerAction::Transition)
+        .just_released(&ClearSkiesPlayerAction::Transition)
         .then_some(res_set(NextState::Pending(ClearSkiesState::PaintSkies)))
 }
