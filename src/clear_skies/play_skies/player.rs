@@ -36,11 +36,27 @@ impl Plugin for ClearSkiesPlayerPlugin {
 #[derive(Copy, Clone, PartialEq, Eq, Default, Debug, Component)]
 #[require(
     Name = "ClearSkiesPlayer",
+    ClearSkiesPlayerSettings,
     Collider::capsule(5f32, 10f32),
     LockedAxes::ROTATION_LOCKED,
     RigidBody::Dynamic
 )]
 struct ClearSkiesPlayer;
+
+#[derive(Copy, Clone, PartialEq, Debug, Component)]
+struct ClearSkiesPlayerSettings {
+    speed: f32,
+    jump: f32,
+}
+
+impl Default for ClearSkiesPlayerSettings {
+    fn default() -> Self {
+        ClearSkiesPlayerSettings {
+            speed: 20.0,
+            jump: 50.0,
+        }
+    }
+}
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Hash, Reflect, Actionlike)]
 pub enum ClearSkiesPlayerAction {
@@ -79,10 +95,11 @@ fn move_player(
     player: Single<(
         Entity,
         &LinearVelocity,
+        &ClearSkiesPlayerSettings,
         &ActionState<ClearSkiesPlayerAction>,
     )>,
 ) -> QueryEntityAffect<ComponentSet<LinearVelocity>> {
-    let (player_entity, current_velocity, input) = *player;
+    let (player_entity, current_velocity, player_settings, input) = *player;
 
     let input_xz = input
         .dual_axis_data(&ClearSkiesPlayerAction::Move)
@@ -94,10 +111,10 @@ fn move_player(
     let direction = (input_xz.x * camera.right().xz().normalize())
         + (input_xz.y * camera.forward().xz().normalize());
 
-    let velocity_with_movement = current_velocity.with_xz(direction);
+    let velocity_with_movement = current_velocity.with_xz(direction * player_settings.speed);
 
     let velocity = if input_jump {
-        velocity_with_movement.with_y(10.)
+        velocity_with_movement.with_y(player_settings.jump)
     } else {
         velocity_with_movement
     };
