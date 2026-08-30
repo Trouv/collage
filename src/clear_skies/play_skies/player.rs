@@ -101,9 +101,6 @@ fn move_player(
     } else {
         velocity_with_movement
     };
-
-    dbg!(velocity);
-
     query_entity_affect(player_entity, component_set(LinearVelocity(velocity)))
 }
 
