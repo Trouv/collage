@@ -52,8 +52,8 @@ struct ClearSkiesPlayerSettings {
 impl Default for ClearSkiesPlayerSettings {
     fn default() -> Self {
         ClearSkiesPlayerSettings {
-            speed: 20.0,
-            jump: 50.0,
+            speed: 80.0,
+            jump: 80.0,
         }
     }
 }
