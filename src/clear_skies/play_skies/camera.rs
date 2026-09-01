@@ -13,7 +13,7 @@ pub struct PlaySkiesCamera;
 
 pub fn spawn_camera(
     render_target: Res<ClearSkiesRenderTarget>,
-) -> CommandSpawn<(PlaySkiesCamera, Camera, RenderTarget)> {
+) -> CommandSpawn<(PlaySkiesCamera, Camera, Projection, RenderTarget)> {
     command_spawn((
         PlaySkiesCamera,
         Camera {
@@ -21,6 +21,7 @@ pub fn spawn_camera(
             clear_color: ClearColorConfig::Custom(Color::srgb(0.0, 0.4, 1.0)),
             ..default()
         },
+        Projection::Orthographic(OrthographicProjection::default_3d()),
         RenderTarget::from((**render_target).clone()),
     ))
 }
