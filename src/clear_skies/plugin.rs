@@ -1,4 +1,5 @@
 use avian3d::PhysicsPlugins;
+use avian3d::dynamics::integrator::Gravity;
 use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
 use bevy_pipe_affect::prelude::*;
@@ -32,6 +33,7 @@ impl Plugin for ClearSkiesPlugin {
                 .load_collection::<ClearSkiesAssetCollection>(),
         )
         .add_systems(OnEnter(ClearSkiesState::Setup), spawn_scene.pipe(affect))
+        .insert_resource(Gravity(Vec3::NEG_Y * 100.0))
         .add_systems(
             Update,
             proceed_to_paint_skies
