@@ -2,12 +2,14 @@ use avian3d::PhysicsPlugins;
 use avian3d::collision::collider::Collider;
 use avian3d::dynamics::integrator::Gravity;
 use avian3d::dynamics::rigid_body::{LinearVelocity, LockedAxes, RigidBody};
+use bevy::camera::visibility::RenderLayers;
 use bevy::prelude::*;
 use bevy_pipe_affect::prelude::*;
 use leafwing_input_manager::prelude::*;
 
 use crate::clear_skies::ClearSkiesState;
 use crate::clear_skies::play_skies::PlaySkiesCamera;
+use crate::clear_skies::render_layers::PAINTED_LAYER;
 use crate::clear_skies::switch_gamepads::SwitchGamepadsPlugin;
 
 #[derive(Copy, Clone, PartialEq, Eq, Default, Debug)]
@@ -45,7 +47,8 @@ impl Plugin for ClearSkiesPlayerPlugin {
     ClearSkiesPlayerSettings,
     Collider::capsule(5f32, 10f32),
     LockedAxes::ROTATION_LOCKED,
-    RigidBody::Dynamic
+    RigidBody::Dynamic,
+    RenderLayers = PAINTED_LAYER
 )]
 struct ClearSkiesPlayer;
 
@@ -74,11 +77,19 @@ pub enum ClearSkiesPlayerAction {
     Transition,
 }
 
-fn spawn_player() -> CommandSpawn<(
-    ClearSkiesPlayer,
-    Transform,
-    InputMap<ClearSkiesPlayerAction>,
-)> {
+fn spawn_player() -> AssetAddAnd<
+    StandardMaterial,
+    AssetAddAnd<
+        Mesh,
+        CommandSpawn<(
+            ClearSkiesPlayer,
+            Transform,
+            InputMap<ClearSkiesPlayerAction>,
+            Mesh3d,
+            MeshMaterial3d<StandardMaterial>,
+        )>,
+    >,
+> {
     let input_map = InputMap::default()
         .with_dual_axis(
             ClearSkiesPlayerAction::Move,
@@ -89,11 +100,18 @@ fn spawn_player() -> CommandSpawn<(
         .with(ClearSkiesPlayerAction::Jump, GamepadButton::South)
         .with(ClearSkiesPlayerAction::Transition, GamepadButton::East)
         .with(ClearSkiesPlayerAction::Transition, KeyCode::KeyC);
-    command_spawn((
-        ClearSkiesPlayer,
-        Transform::from_xyz(0.0, 500.0, -750.0),
-        input_map,
-    ))
+
+    asset_add_and(StandardMaterial::default(), |material| {
+        asset_add_and(Capsule3d::new(5.0, 10.0).into(), |handle| {
+            command_spawn((
+                ClearSkiesPlayer,
+                Transform::from_xyz(0.0, 500.0, -750.0),
+                input_map,
+                Mesh3d(handle),
+                MeshMaterial3d(material),
+            ))
+        })
+    })
 }
 
 fn move_player(
