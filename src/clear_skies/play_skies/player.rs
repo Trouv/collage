@@ -1,4 +1,6 @@
+use avian3d::PhysicsPlugins;
 use avian3d::collision::collider::Collider;
+use avian3d::dynamics::integrator::Gravity;
 use avian3d::dynamics::rigid_body::{LinearVelocity, LockedAxes, RigidBody};
 use bevy::prelude::*;
 use bevy_pipe_affect::prelude::*;
@@ -13,23 +15,27 @@ pub struct ClearSkiesPlayerPlugin;
 
 impl Plugin for ClearSkiesPlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(SwitchGamepadsPlugin::<ClearSkiesPlayerAction>::default())
-            .add_systems(
-                OnEnter(ClearSkiesState::PlaySkies),
-                spawn_player.pipe(affect),
+        app.add_plugins((
+            SwitchGamepadsPlugin::<ClearSkiesPlayerAction>::default(),
+            PhysicsPlugins::default(),
+        ))
+        .insert_resource(Gravity(Vec3::NEG_Y * 100.0))
+        .add_systems(
+            OnEnter(ClearSkiesState::PlaySkies),
+            spawn_player.pipe(affect),
+        )
+        .add_systems(
+            Update,
+            (
+                transition_to_paint_skies.pipe(affect),
+                move_player.pipe(affect),
             )
-            .add_systems(
-                Update,
-                (
-                    transition_to_paint_skies.pipe(affect),
-                    move_player.pipe(affect),
-                )
-                    .run_if(in_state(ClearSkiesState::PlaySkies)),
-            )
-            .add_systems(
-                OnExit(ClearSkiesState::PlaySkies),
-                despawn_player.pipe(affect),
-            );
+                .run_if(in_state(ClearSkiesState::PlaySkies)),
+        )
+        .add_systems(
+            OnExit(ClearSkiesState::PlaySkies),
+            despawn_player.pipe(affect),
+        );
     }
 }
 

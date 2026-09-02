@@ -1,5 +1,3 @@
-use avian3d::PhysicsPlugins;
-use avian3d::dynamics::integrator::Gravity;
 use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
 use bevy_pipe_affect::prelude::*;
@@ -20,25 +18,19 @@ pub struct ClearSkiesPlugin;
 
 impl Plugin for ClearSkiesPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins((
-            PaintSkiesPlugin,
-            PlaySkiesPlugin,
-            ClearSkiesCameraPlugin,
-            PhysicsPlugins::default(),
-        ))
-        .add_sub_state::<ClearSkiesState>()
-        .add_loading_state(
-            LoadingState::new(ClearSkiesState::Loading)
-                .continue_to_state(ClearSkiesState::Setup)
-                .load_collection::<ClearSkiesAssetCollection>(),
-        )
-        .add_systems(OnEnter(ClearSkiesState::Setup), spawn_scene.pipe(affect))
-        .insert_resource(Gravity(Vec3::NEG_Y * 100.0))
-        .add_systems(
-            Update,
-            proceed_to_paint_skies
-                .pipe(affect)
-                .run_if(in_state(ClearSkiesState::Setup)),
-        );
+        app.add_plugins((PaintSkiesPlugin, PlaySkiesPlugin, ClearSkiesCameraPlugin))
+            .add_sub_state::<ClearSkiesState>()
+            .add_loading_state(
+                LoadingState::new(ClearSkiesState::Loading)
+                    .continue_to_state(ClearSkiesState::Setup)
+                    .load_collection::<ClearSkiesAssetCollection>(),
+            )
+            .add_systems(OnEnter(ClearSkiesState::Setup), spawn_scene.pipe(affect))
+            .add_systems(
+                Update,
+                proceed_to_paint_skies
+                    .pipe(affect)
+                    .run_if(in_state(ClearSkiesState::Setup)),
+            );
     }
 }
