@@ -15,3 +15,5 @@ mod render_layers;
 mod camera;
 
 mod switch_gamepads;
+
+mod platformer_shadow;

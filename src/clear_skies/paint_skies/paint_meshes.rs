@@ -4,6 +4,7 @@ use avian3d::collision::collider::Collider;
 use avian3d::dynamics::rigid_body::RigidBody;
 use bevy::asset::RenderAssetUsages;
 use bevy::camera::visibility::RenderLayers;
+use bevy::pbr::ExtendedMaterial;
 use bevy::prelude::{Image, *};
 use bevy::render::render_resource::TextureFormat;
 use bevy::render::view::screenshot::{Screenshot, ScreenshotCaptured};
@@ -23,6 +24,7 @@ use crate::clear_skies::paint_skies::paint_layer_history::{
     triggerable_last_layer_index,
 };
 use crate::clear_skies::paint_skies::triangle_with_uvs::{OctahedronWithUvs, TriangleWithUvs};
+use crate::clear_skies::platformer_shadow::PlatformerShadowMaterialExtension;
 use crate::clear_skies::play_skies::PlaySkiesCamera;
 use crate::clear_skies::render_layers::{PAINTABLE_LAYER, PAINTED_LAYER};
 use crate::pipe_system::pipe;
@@ -375,10 +377,12 @@ fn paint_meshes(
     AssetAddAnd<
         Mesh,
         AssetAddAnd<
-            StandardMaterial,
+            ExtendedMaterial<StandardMaterial, PlatformerShadowMaterialExtension>,
             CommandSpawn<(
                 Mesh3d,
-                MeshMaterial3d<StandardMaterial>,
+                MeshMaterial3d<
+                    ExtendedMaterial<StandardMaterial, PlatformerShadowMaterialExtension>,
+                >,
                 Transform,
                 RenderLayers,
                 PaintedMesh,
@@ -469,9 +473,14 @@ fn paint_meshes(
                                 // since we already calculated it in world-space
                                 let transform = Transform::from_translation(centroid);
 
-                                let material = StandardMaterial {
+                                let standard_material = StandardMaterial {
                                     unlit: true,
                                     ..StandardMaterial::from((**paint_skies_canvas).clone())
+                                };
+
+                                let material = ExtendedMaterial {
+                                    base: standard_material,
+                                    ..default()
                                 };
 
                                 Some(asset_add_and(mesh, move |mesh_handle| {

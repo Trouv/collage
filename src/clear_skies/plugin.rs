@@ -4,6 +4,7 @@ use bevy_pipe_affect::prelude::*;
 
 use crate::clear_skies::camera::ClearSkiesCameraPlugin;
 use crate::clear_skies::paint_skies::PaintSkiesPlugin;
+use crate::clear_skies::platformer_shadow::PlatformerShadowPlugin;
 use crate::clear_skies::play_skies::PlaySkiesPlugin;
 use crate::clear_skies::state::ClearSkiesState;
 use crate::clear_skies::transition::{
@@ -18,19 +19,24 @@ pub struct ClearSkiesPlugin;
 
 impl Plugin for ClearSkiesPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins((PaintSkiesPlugin, PlaySkiesPlugin, ClearSkiesCameraPlugin))
-            .add_sub_state::<ClearSkiesState>()
-            .add_loading_state(
-                LoadingState::new(ClearSkiesState::Loading)
-                    .continue_to_state(ClearSkiesState::Setup)
-                    .load_collection::<ClearSkiesAssetCollection>(),
-            )
-            .add_systems(OnEnter(ClearSkiesState::Setup), spawn_scene.pipe(affect))
-            .add_systems(
-                Update,
-                proceed_to_paint_skies
-                    .pipe(affect)
-                    .run_if(in_state(ClearSkiesState::Setup)),
-            );
+        app.add_plugins((
+            PaintSkiesPlugin,
+            PlaySkiesPlugin,
+            ClearSkiesCameraPlugin,
+            PlatformerShadowPlugin,
+        ))
+        .add_sub_state::<ClearSkiesState>()
+        .add_loading_state(
+            LoadingState::new(ClearSkiesState::Loading)
+                .continue_to_state(ClearSkiesState::Setup)
+                .load_collection::<ClearSkiesAssetCollection>(),
+        )
+        .add_systems(OnEnter(ClearSkiesState::Setup), spawn_scene.pipe(affect))
+        .add_systems(
+            Update,
+            proceed_to_paint_skies
+                .pipe(affect)
+                .run_if(in_state(ClearSkiesState::Setup)),
+        );
     }
 }

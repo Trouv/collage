@@ -8,6 +8,7 @@ use bevy_pipe_affect::prelude::*;
 use leafwing_input_manager::prelude::*;
 
 use crate::clear_skies::ClearSkiesState;
+use crate::clear_skies::platformer_shadow::PlatformerShadowCaster;
 use crate::clear_skies::play_skies::PlaySkiesCamera;
 use crate::clear_skies::render_layers::PAINTED_LAYER;
 use crate::clear_skies::switch_gamepads::SwitchGamepadsPlugin;
@@ -48,7 +49,8 @@ impl Plugin for ClearSkiesPlayerPlugin {
     Collider::capsule(5f32, 10f32),
     LockedAxes::ROTATION_LOCKED,
     RigidBody::Dynamic,
-    RenderLayers = PAINTED_LAYER
+    RenderLayers = PAINTED_LAYER,
+    PlatformerShadowCaster = PlatformerShadowCaster { radius: 5.0 }
 )]
 struct ClearSkiesPlayer;
 
