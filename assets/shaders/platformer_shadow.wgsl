@@ -20,7 +20,19 @@ struct PlatformerShadowCasterInfo {
     translation_xz: vec2<f32>,
 }
 
-@group(#{MATERIAL_BIND_GROUP}) @binding(64) var<storage, read> casters: array<PlatformerShadowCasterInfo>;
+@group(#{MATERIAL_BIND_GROUP}) @binding(100) var<storage, read> caster: PlatformerShadowCasterInfo;
+
+fn distance_to_caster(position: vec4<f32>, caster: PlatformerShadowCasterInfo) -> f32 {
+    return length(position.xz - caster.translation_xz);
+}
+
+fn shadow_multiplier_for_caster(position: vec4<f32>, caster: PlatformerShadowCasterInfo) -> f32 {
+    let distance = distance_to_caster(position, caster);
+
+    let shadow_intensity = sqrt(max((caster.radius * caster.radius) - (distance * distance), 0.0)) / caster.radius;
+
+    return 1.0 - shadow_intensity;
+}
 
 @fragment
 fn fragment(
@@ -30,23 +42,15 @@ fn fragment(
     // generate a PbrInput struct from the StandardMaterial bindings
     var pbr_input = pbr_input_from_standard_material(in, is_front);
 
-    // alpha discard
-    pbr_input.material.base_color = alpha_discard(pbr_input.material, pbr_input.material.base_color);
-
 #ifdef PREPASS_PIPELINE
     // in deferred mode we can't modify anything after that, as lighting is run in a separate fullscreen shader.
     let out = deferred_output(in, pbr_input);
 #else
     var out: FragmentOutput;
-    // apply lighting
-    out.color = apply_pbr_lighting(pbr_input);
 
-    // apply in-shader post processing (fog, alpha-premultiply, and also tonemapping, debanding if the camera is non-hdr)
-    // note this does not include fullscreen postprocessing effects like bloom.
-    out.color = main_pass_post_lighting_processing(pbr_input, out.color);
+    let shadow_mult = shadow_multiplier_for_caster(pbr_input.world_position, caster);
 
-    // we can optionally modify the final result here
-    out.color = out.color * 2.0;
+    out.color = pbr_input.material.base_color * shadow_mult;
 #endif
 
     return out;

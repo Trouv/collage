@@ -17,7 +17,7 @@ impl Plugin for PlatformerShadowPlugin {
             ExtendedMaterial<StandardMaterial, PlatformerShadowMaterialExtension>,
         >::default())
             .add_systems(
-                PostUpdate,
+                Update,
                 write_caster_info
                     .pipe(affect)
                     .after(TransformSystems::Propagate),
@@ -30,7 +30,7 @@ const PLATFORMER_SHADOW_CASTER_INFO_BUFFER_HANDLE: Handle<ShaderBuffer> =
 
 #[derive(Clone, PartialEq, Debug, AsBindGroup, Asset, TypePath)]
 pub struct PlatformerShadowMaterialExtension {
-    #[storage(64, read_only)]
+    #[storage(100, read_only)]
     casters: Handle<ShaderBuffer>,
 }
 
@@ -54,10 +54,19 @@ impl MaterialExtension for PlatformerShadowMaterialExtension {
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Default, Debug, ShaderType)]
+#[derive(Copy, Clone, PartialEq, Debug, ShaderType)]
 pub struct PlatformerShadowCasterInfo {
     radius: f32,
     translation_xz: Vec2,
+}
+
+impl Default for PlatformerShadowCasterInfo {
+    fn default() -> Self {
+        PlatformerShadowCasterInfo {
+            radius: 0.1,
+            translation_xz: Vec2::default(),
+        }
+    }
 }
 
 #[derive(Copy, Clone, PartialEq, Default, Debug, Component)]
@@ -68,8 +77,9 @@ pub struct PlatformerShadowCaster {
 fn write_caster_info(
     casters: Query<(&GlobalTransform, &PlatformerShadowCaster)>,
 ) -> AssetInsert<ShaderBuffer> {
-    let caster_infos = casters
+    let caster_info = casters
         .into_iter()
+        .next()
         .map(|(transform, caster)| {
             let radius = caster.radius;
             let translation_xz = transform.translation().xz();
@@ -79,11 +89,11 @@ fn write_caster_info(
                 translation_xz,
             }
         })
-        .collect::<Vec<_>>();
+        .unwrap_or_default();
 
     let shader_buffer = {
         let mut buffer = ShaderBuffer::default();
-        buffer.set_data(caster_infos);
+        buffer.set_data(caster_info);
         buffer
     };
 
