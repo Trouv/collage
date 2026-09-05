@@ -5,3 +5,5 @@ mod camera;
 pub use camera::PlaySkiesCamera;
 
 mod player;
+
+mod platformer_shadow;
