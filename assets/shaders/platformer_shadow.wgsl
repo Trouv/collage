@@ -43,15 +43,17 @@ fn fragment(
     var pbr_input = pbr_input_from_standard_material(in, is_front);
 
     pbr_input.material.base_color = alpha_discard(pbr_input.material, pbr_input.material.base_color);
+
+    let shadow_mult = shadow_multiplier_for_caster(pbr_input.world_position, caster);
+
+    pbr_input.material.base_color = vec4f((pbr_input.material.base_color.xyz * shadow_mult), pbr_input.material.base_color.a);
 #ifdef PREPASS_PIPELINE
     // in deferred mode we can't modify anything after that, as lighting is run in a separate fullscreen shader.
     let out = deferred_output(in, pbr_input);
 #else
     var out: FragmentOutput;
 
-    let shadow_mult = shadow_multiplier_for_caster(pbr_input.world_position, caster);
-
-    out.color = vec4f((pbr_input.material.base_color.xyz * shadow_mult), pbr_input.material.base_color.a);
+    out.color = pbr_input.material.base_color;
 #endif
 
     return out;
