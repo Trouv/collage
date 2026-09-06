@@ -24,7 +24,7 @@ use crate::clear_skies::paint_skies::paint_layer_history::{
     triggerable_last_layer_index,
 };
 use crate::clear_skies::paint_skies::triangle_with_uvs::{OctahedronWithUvs, TriangleWithUvs};
-use crate::clear_skies::platformer_shadow::PlatformerShadowMaterialExtension;
+use crate::clear_skies::platformer_shadow::PlatformerShadowMaterial;
 use crate::clear_skies::play_skies::PlaySkiesCamera;
 use crate::clear_skies::render_layers::{PAINTABLE_LAYER, PAINTED_LAYER};
 use crate::pipe_system::pipe;
@@ -377,12 +377,10 @@ fn paint_meshes(
     AssetAddAnd<
         Mesh,
         AssetAddAnd<
-            ExtendedMaterial<StandardMaterial, PlatformerShadowMaterialExtension>,
+            PlatformerShadowMaterial,
             CommandSpawn<(
                 Mesh3d,
-                MeshMaterial3d<
-                    ExtendedMaterial<StandardMaterial, PlatformerShadowMaterialExtension>,
-                >,
+                MeshMaterial3d<PlatformerShadowMaterial>,
                 Transform,
                 RenderLayers,
                 PaintedMesh,
@@ -473,15 +471,8 @@ fn paint_meshes(
                                 // since we already calculated it in world-space
                                 let transform = Transform::from_translation(centroid);
 
-                                let standard_material = StandardMaterial {
-                                    unlit: true,
-                                    ..StandardMaterial::from((**paint_skies_canvas).clone())
-                                };
-
-                                let material = ExtendedMaterial {
-                                    base: standard_material,
-                                    ..default()
-                                };
+                                let material =
+                                    PlatformerShadowMaterial::from(paint_skies_canvas.0.clone());
 
                                 Some(asset_add_and(mesh, move |mesh_handle| {
                                     asset_add_and(material, move |material_handle| {

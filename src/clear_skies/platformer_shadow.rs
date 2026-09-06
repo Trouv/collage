@@ -13,9 +13,7 @@ pub struct PlatformerShadowPlugin;
 
 impl Plugin for PlatformerShadowPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(MaterialPlugin::<
-            ExtendedMaterial<StandardMaterial, PlatformerShadowMaterialExtension>,
-        >::default())
+        app.add_plugins(MaterialPlugin::<PlatformerShadowMaterial>::default())
             .add_systems(
                 Update,
                 write_caster_info
@@ -29,27 +27,27 @@ const PLATFORMER_SHADOW_CASTER_INFO_BUFFER_HANDLE: Handle<ShaderBuffer> =
     Handle::Uuid(uuid!("c0c74b8a-dd5a-44a8-b5cc-1b9c506d66cd"), PhantomData);
 
 #[derive(Clone, PartialEq, Debug, AsBindGroup, Asset, TypePath)]
-pub struct PlatformerShadowMaterialExtension {
-    #[storage(100, read_only)]
+pub struct PlatformerShadowMaterial {
+    #[storage(0, read_only)]
     casters: Handle<ShaderBuffer>,
+    #[texture(1)]
+    #[sampler(2)]
+    color_texture: Handle<Image>,
 }
 
-impl Default for PlatformerShadowMaterialExtension {
-    fn default() -> Self {
-        PlatformerShadowMaterialExtension {
+impl From<Handle<Image>> for PlatformerShadowMaterial {
+    fn from(color_texture: Handle<Image>) -> Self {
+        PlatformerShadowMaterial {
             casters: PLATFORMER_SHADOW_CASTER_INFO_BUFFER_HANDLE,
+            color_texture,
         }
     }
 }
 
 const PLATFORMER_SHADOW_SHADER_PATH: &str = "shaders/platformer_shadow.wgsl";
 
-impl MaterialExtension for PlatformerShadowMaterialExtension {
+impl Material for PlatformerShadowMaterial {
     fn fragment_shader() -> ShaderRef {
-        PLATFORMER_SHADOW_SHADER_PATH.into()
-    }
-
-    fn deferred_fragment_shader() -> ShaderRef {
         PLATFORMER_SHADOW_SHADER_PATH.into()
     }
 }

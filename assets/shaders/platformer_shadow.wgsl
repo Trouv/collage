@@ -1,26 +1,13 @@
-#import bevy_pbr::{
-    pbr_fragment::pbr_input_from_standard_material,
-    pbr_functions::alpha_discard,
-}
-
-#ifdef PREPASS_PIPELINE
-#import bevy_pbr::{
-    prepass_io::{VertexOutput, FragmentOutput},
-    pbr_deferred_functions::deferred_output,
-}
-#else
-#import bevy_pbr::{
-    forward_io::{VertexOutput, FragmentOutput},
-    pbr_functions::{apply_pbr_lighting, main_pass_post_lighting_processing},
-}
-#endif
+#import bevy_pbr::forward_io::VertexOutput
 
 struct PlatformerShadowCasterInfo {
     radius: f32,
     translation_xz: vec2<f32>,
 }
 
-@group(#{MATERIAL_BIND_GROUP}) @binding(100) var<storage, read> caster: PlatformerShadowCasterInfo;
+@group(#{MATERIAL_BIND_GROUP}) @binding(0) var<storage, read> caster: PlatformerShadowCasterInfo;
+@group(#{MATERIAL_BIND_GROUP}) @binding(1) var material_color_texture: texture_2d<f32>;
+@group(#{MATERIAL_BIND_GROUP}) @binding(2) var material_color_sampler: sampler;
 
 fn distance_to_caster(position: vec4<f32>, caster: PlatformerShadowCasterInfo) -> f32 {
     return length(position.xz - caster.translation_xz);
@@ -37,24 +24,10 @@ fn shadow_multiplier_for_caster(position: vec4<f32>, caster: PlatformerShadowCas
 @fragment
 fn fragment(
     in: VertexOutput,
-    @builtin(front_facing) is_front: bool,
-) -> FragmentOutput {
-    // generate a PbrInput struct from the StandardMaterial bindings
-    var pbr_input = pbr_input_from_standard_material(in, is_front);
+) -> @location(0) vec4f {
+    let base_color = textureSample(material_color_texture, material_color_sampler, in.uv);
 
-    pbr_input.material.base_color = alpha_discard(pbr_input.material, pbr_input.material.base_color);
+    let shadow_mult = shadow_multiplier_for_caster(in.world_position, caster);
 
-    let shadow_mult = shadow_multiplier_for_caster(pbr_input.world_position, caster);
-
-    pbr_input.material.base_color = vec4f((pbr_input.material.base_color.xyz * shadow_mult), pbr_input.material.base_color.a);
-#ifdef PREPASS_PIPELINE
-    // in deferred mode we can't modify anything after that, as lighting is run in a separate fullscreen shader.
-    let out = deferred_output(in, pbr_input);
-#else
-    var out: FragmentOutput;
-
-    out.color = pbr_input.material.base_color;
-#endif
-
-    return out;
+    return vec4f((base_color.xyz * shadow_mult), base_color.a);
 }
