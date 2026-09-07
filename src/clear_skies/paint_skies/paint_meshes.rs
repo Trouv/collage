@@ -348,36 +348,45 @@ pub struct PaintedMesh {
 #[relationship_target(relationship = PaintedMesh)]
 pub struct PaintedMeshes(Vec<Entity>);
 
-fn paint_meshes(
-    In(layer_index): In<LayerIndex>,
-    paintable_meshes: Query<
-        (
-            Entity,
-            &Mesh3d,
-            &GlobalTransform,
-            &PaintableHistory<GlobalTransform>,
-        ),
-        With<Paintable>,
-    >,
-    mesh_assets: Res<Assets<Mesh>>,
-    paintable_camera: Single<
-        (
-            &Camera,
-            &GlobalTransform,
-            &PaintableHistory<GlobalTransform>,
-            &ActionState<PaintSkiesAction>,
-            &PaintableHistory<ActionState<PaintSkiesAction>>,
-        ),
-        With<Paintable>,
-    >,
-    play_skies_camera: Single<(&Camera, &GlobalTransform), With<PlaySkiesCamera>>,
-    paint_layer_settings: Res<PaintLayerSettings>,
-    paint_skies_canvas: Res<PaintSkiesCanvas>,
-) -> Vec<
-    AssetAddAnd<
-        Mesh,
+fn paint_meshes_with_material(
+    layer_index: LayerIndex,
+    material_handle: Handle<PlatformerShadowMaterial>,
+) -> RunFnSystem<
+    (
+        Query<
+            'static,
+            'static,
+            (
+                Entity,
+                &'static Mesh3d,
+                &'static GlobalTransform,
+                &'static PaintableHistory<GlobalTransform>,
+            ),
+            With<Paintable>,
+        >,
+        Res<'static, Assets<Mesh>>,
+        Single<
+            'static,
+            'static,
+            (
+                &'static Camera,
+                &'static GlobalTransform,
+                &'static PaintableHistory<GlobalTransform>,
+                &'static PaintableHistory<ActionState<PaintSkiesAction>>,
+            ),
+            With<Paintable>,
+        >,
+        Single<
+            'static,
+            'static,
+            (&'static Camera, &'static GlobalTransform),
+            With<PlaySkiesCamera>,
+        >,
+        Res<'static, PaintLayerSettings>,
+    ),
+    Vec<
         AssetAddAnd<
-            PlatformerShadowMaterial,
+            Mesh,
             CommandSpawn<(
                 Mesh3d,
                 MeshMaterial3d<PlatformerShadowMaterial>,
@@ -389,93 +398,123 @@ fn paint_meshes(
         >,
     >,
 > {
-    let (
-        paintable_camera,
-        paintable_camera_transform,
-        paintable_camera_transform_history,
-        paint_action,
-        paint_action_history,
-    ) = *paintable_camera;
-
-    if !paint_action.pressed(&PaintSkiesAction::Paint) {
-        vec![]
-    } else {
-        let previous_layer_index = LayerIndex(layer_index.0.saturating_sub(1));
-        let previous_paint_pressed = paint_action_history
-            .get(previous_layer_index)
-            .is_some_and(|action_state| action_state.pressed(&PaintSkiesAction::Paint));
-
-        let previous_paintable_camera_transform = previous_paint_pressed
-            .then(|| paintable_camera_transform_history.get(previous_layer_index))
-            .flatten()
-            .unwrap_or(paintable_camera_transform);
-
-        let (play_skies_camera, play_skies_camera_transform) = *play_skies_camera;
-
-        let triangle_projector_for_mesh = triangle_projector_for_mesh_for_universe(
-            &paint_layer_settings,
-            &layer_index,
+    run_fn_system(
+        move |(
+            paintable_meshes,
+            mesh_assets,
             paintable_camera,
-            paintable_camera_transform,
             play_skies_camera,
-            play_skies_camera_transform,
-        );
-        let previous_triangle_projector_for_mesh = triangle_projector_for_mesh_for_universe(
-            &paint_layer_settings,
-            &previous_layer_index,
-            paintable_camera,
-            previous_paintable_camera_transform,
-            play_skies_camera,
-            play_skies_camera_transform,
-        );
+            paint_layer_settings,
+        ): (
+            Query<
+                (
+                    Entity,
+                    &Mesh3d,
+                    &GlobalTransform,
+                    &PaintableHistory<GlobalTransform>,
+                ),
+                With<Paintable>,
+            >,
+            Res<Assets<Mesh>>,
+            Single<
+                (
+                    &Camera,
+                    &GlobalTransform,
+                    &PaintableHistory<GlobalTransform>,
+                    &PaintableHistory<ActionState<PaintSkiesAction>>,
+                ),
+                With<Paintable>,
+            >,
+            Single<(&Camera, &GlobalTransform), With<PlaySkiesCamera>>,
+            Res<PaintLayerSettings>,
+        )| {
+            let (
+                paintable_camera,
+                paintable_camera_transform,
+                paintable_camera_transform_history,
+                paint_action_history,
+            ) = *paintable_camera;
 
-        paintable_meshes
-            .iter()
-            .flat_map(
-                |(paintable_mesh_entity, mesh, mesh_transform, mesh_transform_history)| {
-                    let mesh = mesh_assets.get(mesh)?;
+            let previous_layer_index = LayerIndex(layer_index.0.saturating_sub(1));
+            let previous_paint_pressed = paint_action_history
+                .get(previous_layer_index)
+                .is_some_and(|action_state| action_state.pressed(&PaintSkiesAction::Paint));
 
-                    let triangle_projector = triangle_projector_for_mesh(mesh_transform);
+            let previous_paintable_camera_transform = previous_paint_pressed
+                .then(|| paintable_camera_transform_history.get(previous_layer_index))
+                .flatten()
+                .unwrap_or(paintable_camera_transform);
 
-                    let previous_mesh_transform =
-                        mesh_transform_history.get(previous_layer_index)?;
+            let (play_skies_camera, play_skies_camera_transform) = *play_skies_camera;
 
-                    let previous_triangle_projector =
-                        previous_triangle_projector_for_mesh(previous_mesh_transform);
+            let triangle_projector_for_mesh = triangle_projector_for_mesh_for_universe(
+                &paint_layer_settings,
+                &layer_index,
+                paintable_camera,
+                paintable_camera_transform,
+                play_skies_camera,
+                play_skies_camera_transform,
+            );
+            let previous_triangle_projector_for_mesh = triangle_projector_for_mesh_for_universe(
+                &paint_layer_settings,
+                &previous_layer_index,
+                paintable_camera,
+                previous_paintable_camera_transform,
+                play_skies_camera,
+                play_skies_camera_transform,
+            );
 
-                    let spawn_commands = mesh
-                        .clone()
-                        .triangles()
-                        .ok()?
-                        .enumerate()
-                        .flat_map(|(triangle_index, triangle)| {
-                            Some((
-                                triangle_index,
-                                triangle_projector(triangle)?,
-                                previous_triangle_projector(triangle)?,
-                            ))
-                        })
-                        .flat_map(
-                            |(triangle_index, triangle_with_uvs, previous_triangle_with_uvs)| {
-                                let octahedron_with_uvs = OctahedronWithUvs {
-                                    near_face: triangle_with_uvs,
-                                    far_face: previous_triangle_with_uvs,
-                                };
-                                let (centroid, centered_octahedron) =
-                                    octahedron_with_uvs.centered();
+            let material_handle = material_handle.clone();
 
-                                let mesh = Mesh::from(centered_octahedron);
-                                let collider = Collider::trimesh_from_mesh(&mesh)?;
+            paintable_meshes
+                .iter()
+                .flat_map(
+                    |(paintable_mesh_entity, mesh, mesh_transform, mesh_transform_history)| {
+                        let mesh = mesh_assets.get(mesh)?;
 
-                                // Note: We don't need to adjust this relative to camera translation
-                                // since we already calculated it in world-space
-                                let transform = Transform::from_translation(centroid);
+                        let triangle_projector = triangle_projector_for_mesh(mesh_transform);
 
-                                let material =
-                                    PlatformerShadowMaterial::from(paint_skies_canvas.0.clone());
+                        let previous_mesh_transform =
+                            mesh_transform_history.get(previous_layer_index)?;
 
-                                Some(asset_add_and(mesh, move |mesh_handle| {
-                                    asset_add_and(material, move |material_handle| {
+                        let previous_triangle_projector =
+                            previous_triangle_projector_for_mesh(previous_mesh_transform);
+
+                        let spawn_commands = mesh
+                            .clone()
+                            .triangles()
+                            .ok()?
+                            .enumerate()
+                            .flat_map(|(triangle_index, triangle)| {
+                                Some((
+                                    triangle_index,
+                                    triangle_projector(triangle)?,
+                                    previous_triangle_projector(triangle)?,
+                                ))
+                            })
+                            .flat_map(
+                                |(
+                                    triangle_index,
+                                    triangle_with_uvs,
+                                    previous_triangle_with_uvs,
+                                )| {
+                                    let octahedron_with_uvs = OctahedronWithUvs {
+                                        near_face: triangle_with_uvs,
+                                        far_face: previous_triangle_with_uvs,
+                                    };
+                                    let (centroid, centered_octahedron) =
+                                        octahedron_with_uvs.centered();
+
+                                    let mesh = Mesh::from(centered_octahedron);
+                                    let collider = Collider::trimesh_from_mesh(&mesh)?;
+
+                                    // Note: We don't need to adjust this relative to camera translation
+                                    // since we already calculated it in world-space
+                                    let transform = Transform::from_translation(centroid);
+
+                                    let material_handle = material_handle.clone();
+
+                                    Some(asset_add_and(mesh, move |mesh_handle| {
                                         command_spawn((
                                             Mesh3d(mesh_handle),
                                             MeshMaterial3d(material_handle),
@@ -484,20 +523,84 @@ fn paint_meshes(
                                             PaintedMesh {
                                                 painted_from: paintable_mesh_entity,
                                                 triangle_index,
-                                                paint_layer: layer_index,
+                                                paint_layer: layer_index.clone(),
                                             },
                                             collider,
                                         ))
-                                    })
-                                }))
-                            },
-                        )
-                        .collect::<Vec<_>>();
+                                    }))
+                                },
+                            )
+                            .collect::<Vec<_>>();
 
-                    Some(spawn_commands)
-                },
-            )
-            .flatten()
-            .collect::<Vec<_>>()
-    }
+                        Some(spawn_commands)
+                    },
+                )
+                .flatten()
+                .collect::<Vec<_>>()
+        },
+    )
+}
+
+fn paint_meshes(
+    In(layer_index): In<LayerIndex>,
+    paint_action: Single<&ActionState<PaintSkiesAction>>,
+    paint_skies_canvas: Res<PaintSkiesCanvas>,
+) -> Option<
+    AssetAddAnd<
+        PlatformerShadowMaterial,
+        RunFnSystem<
+            (
+                Query<
+                    'static,
+                    'static,
+                    (
+                        Entity,
+                        &'static Mesh3d,
+                        &'static GlobalTransform,
+                        &'static PaintableHistory<GlobalTransform>,
+                    ),
+                    With<Paintable>,
+                >,
+                Res<'static, Assets<Mesh>>,
+                Single<
+                    'static,
+                    'static,
+                    (
+                        &'static Camera,
+                        &'static GlobalTransform,
+                        &'static PaintableHistory<GlobalTransform>,
+                        &'static PaintableHistory<ActionState<PaintSkiesAction>>,
+                    ),
+                    With<Paintable>,
+                >,
+                Single<
+                    'static,
+                    'static,
+                    (&'static Camera, &'static GlobalTransform),
+                    With<PlaySkiesCamera>,
+                >,
+                Res<'static, PaintLayerSettings>,
+            ),
+            Vec<
+                AssetAddAnd<
+                    Mesh,
+                    CommandSpawn<(
+                        Mesh3d,
+                        MeshMaterial3d<PlatformerShadowMaterial>,
+                        Transform,
+                        RenderLayers,
+                        PaintedMesh,
+                        Collider,
+                    )>,
+                >,
+            >,
+        >,
+    >,
+> {
+    paint_action.pressed(&PaintSkiesAction::Paint).then(|| {
+        let material = PlatformerShadowMaterial::from(paint_skies_canvas.0.clone());
+        asset_add_and(material, move |material_handle| {
+            paint_meshes_with_material(layer_index, material_handle)
+        })
+    })
 }
