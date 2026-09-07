@@ -348,42 +348,36 @@ pub struct PaintedMesh {
 #[relationship_target(relationship = PaintedMesh)]
 pub struct PaintedMeshes(Vec<Entity>);
 
-fn paint_meshes_with_material(
-    layer_index: LayerIndex,
-    material_handle: Handle<PlatformerShadowMaterial>,
-) -> RunFnSystem<
-    (
-        Query<
-            'static,
-            'static,
-            (
-                Entity,
-                &'static Mesh3d,
-                &'static GlobalTransform,
-                &'static PaintableHistory<GlobalTransform>,
-            ),
-            With<Paintable>,
-        >,
-        Res<'static, Assets<Mesh>>,
-        Single<
-            'static,
-            'static,
-            (
-                &'static Camera,
-                &'static GlobalTransform,
-                &'static PaintableHistory<GlobalTransform>,
-                &'static PaintableHistory<ActionState<PaintSkiesAction>>,
-            ),
-            With<Paintable>,
-        >,
-        Single<
-            'static,
-            'static,
-            (&'static Camera, &'static GlobalTransform),
-            With<PlaySkiesCamera>,
-        >,
-        Res<'static, PaintLayerSettings>,
-    ),
+type PaintMeshesSystemParams<'w, 's> = (
+    Query<
+        'w,
+        's,
+        (
+            Entity,
+            &'w Mesh3d,
+            &'w GlobalTransform,
+            &'w PaintableHistory<GlobalTransform>,
+        ),
+        With<Paintable>,
+    >,
+    Res<'w, Assets<Mesh>>,
+    Single<
+        'w,
+        's,
+        (
+            &'w Camera,
+            &'w GlobalTransform,
+            &'w PaintableHistory<GlobalTransform>,
+            &'w PaintableHistory<ActionState<PaintSkiesAction>>,
+        ),
+        With<Paintable>,
+    >,
+    Single<'w, 's, (&'w Camera, &'w GlobalTransform), With<PlaySkiesCamera>>,
+    Res<'w, PaintLayerSettings>,
+);
+
+type PaintMeshesEffect<'w, 's> = RunFnSystem<
+    PaintMeshesSystemParams<'w, 's>,
     Vec<
         AssetAddAnd<
             Mesh,
@@ -397,7 +391,12 @@ fn paint_meshes_with_material(
             )>,
         >,
     >,
-> {
+>;
+
+fn paint_meshes_with_material(
+    layer_index: LayerIndex,
+    material_handle: Handle<PlatformerShadowMaterial>,
+) -> PaintMeshesEffect<'static, 'static> {
     run_fn_system(
         move |(
             paintable_meshes,
@@ -545,58 +544,7 @@ fn paint_meshes(
     In(layer_index): In<LayerIndex>,
     paint_action: Single<&ActionState<PaintSkiesAction>>,
     paint_skies_canvas: Res<PaintSkiesCanvas>,
-) -> Option<
-    AssetAddAnd<
-        PlatformerShadowMaterial,
-        RunFnSystem<
-            (
-                Query<
-                    'static,
-                    'static,
-                    (
-                        Entity,
-                        &'static Mesh3d,
-                        &'static GlobalTransform,
-                        &'static PaintableHistory<GlobalTransform>,
-                    ),
-                    With<Paintable>,
-                >,
-                Res<'static, Assets<Mesh>>,
-                Single<
-                    'static,
-                    'static,
-                    (
-                        &'static Camera,
-                        &'static GlobalTransform,
-                        &'static PaintableHistory<GlobalTransform>,
-                        &'static PaintableHistory<ActionState<PaintSkiesAction>>,
-                    ),
-                    With<Paintable>,
-                >,
-                Single<
-                    'static,
-                    'static,
-                    (&'static Camera, &'static GlobalTransform),
-                    With<PlaySkiesCamera>,
-                >,
-                Res<'static, PaintLayerSettings>,
-            ),
-            Vec<
-                AssetAddAnd<
-                    Mesh,
-                    CommandSpawn<(
-                        Mesh3d,
-                        MeshMaterial3d<PlatformerShadowMaterial>,
-                        Transform,
-                        RenderLayers,
-                        PaintedMesh,
-                        Collider,
-                    )>,
-                >,
-            >,
-        >,
-    >,
-> {
+) -> Option<AssetAddAnd<PlatformerShadowMaterial, PaintMeshesEffect<'static, 'static>>> {
     paint_action.pressed(&PaintSkiesAction::Paint).then(|| {
         let material = PlatformerShadowMaterial::from(paint_skies_canvas.0.clone());
         asset_add_and(material, move |material_handle| {
