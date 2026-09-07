@@ -1,7 +1,6 @@
 use std::marker::PhantomData;
 
 use bevy::asset::uuid::uuid;
-use bevy::pbr::{ExtendedMaterial, MaterialExtension};
 use bevy::prelude::*;
 use bevy::render::render_resource::{AsBindGroup, ShaderType};
 use bevy::render::storage::ShaderBuffer;

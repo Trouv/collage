@@ -4,7 +4,6 @@ use avian3d::collision::collider::Collider;
 use avian3d::dynamics::rigid_body::RigidBody;
 use bevy::asset::RenderAssetUsages;
 use bevy::camera::visibility::RenderLayers;
-use bevy::pbr::ExtendedMaterial;
 use bevy::prelude::{Image, *};
 use bevy::render::render_resource::TextureFormat;
 use bevy::render::view::screenshot::{Screenshot, ScreenshotCaptured};
@@ -522,7 +521,7 @@ fn paint_meshes_with_material(
                                             PaintedMesh {
                                                 painted_from: paintable_mesh_entity,
                                                 triangle_index,
-                                                paint_layer: layer_index.clone(),
+                                                paint_layer: layer_index,
                                             },
                                             collider,
                                         ))
