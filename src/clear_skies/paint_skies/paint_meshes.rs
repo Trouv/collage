@@ -16,7 +16,6 @@ use crate::clear_skies::camera::{ClearSkiesRenderTarget, ClearSkiesResolution, P
 use crate::clear_skies::paint_skies::paint_layer_history::{
     PaintLayerHistoryPlugin,
     PaintableHistory,
-    RecordPaintLayerHistorySet,
     RecordPresent,
     TruncatePaintLayers,
     last_layer_index,
@@ -26,6 +25,7 @@ use crate::clear_skies::paint_skies::triangle_with_uvs::{OctahedronWithUvs, Tria
 use crate::clear_skies::platformer_shadow::PlatformerShadowMaterial;
 use crate::clear_skies::play_skies::PlaySkiesCamera;
 use crate::clear_skies::render_layers::{PAINTABLE_LAYER, PAINTED_LAYER};
+use crate::delay_message::{DelayMessagePlugin, DelayedMessage};
 use crate::pipe_system::pipe;
 use crate::predicate_timer::{PredicateTimerFinished, add_predicate_timer};
 
@@ -54,6 +54,7 @@ impl Plugin for PaintMeshesPlugin {
                 PaintLayerHistoryPlugin::<GlobalTransform>::default(),
                 PaintLayerHistoryPlugin::<ActionState<PaintSkiesAction>>::default(),
             ))
+            .add_plugins(DelayMessagePlugin::<RecordPresent>::new(1))
             .add_systems(
                 OnEnter(ClearSkiesState::Setup),
                 (
@@ -78,14 +79,10 @@ impl Plugin for PaintMeshesPlugin {
                 Update,
                 (
                     track_transform_for_paintable_meshes.pipe(affect),
-                    last_layer_index
-                        .pipe(paint_meshes)
-                        .pipe(affect)
-                        .after(RecordPaintLayerHistorySet)
-                        .run_if(
-                            in_state(ClearSkiesState::PaintSkies)
-                                .and_then(on_message::<RecordPresent>),
-                        ),
+                    last_layer_index.pipe(paint_meshes).pipe(affect).run_if(
+                        in_state(ClearSkiesState::PaintSkies)
+                            .and_then(on_message::<DelayedMessage<RecordPresent>>),
+                    ),
                     (truncate_paint_layers_meshes
                         .pipe(affect)
                         .run_if(on_message::<TruncatePaintLayers>),)
@@ -245,9 +242,8 @@ fn paint_recently_pressed(
 }
 
 fn trigger_paint_layer(last_layer_index: In<LayerIndex>) -> MessageWrite<RecordPresent> {
-    message_write(RecordPresent {
-        layer: LayerIndex(last_layer_index.0.0 + 1),
-    })
+    let layer = LayerIndex(last_layer_index.0.0 + 1);
+    message_write(RecordPresent { layer })
 }
 
 fn paint_canvas(
@@ -464,7 +460,7 @@ fn paint_meshes_with_material(
 
             let material_handle = material_handle.clone();
 
-            paintable_meshes
+            let spawn_commands = paintable_meshes
                 .iter()
                 .flat_map(
                     |(paintable_mesh_entity, mesh, mesh_transform, mesh_transform_history)| {
@@ -534,20 +530,31 @@ fn paint_meshes_with_material(
                     },
                 )
                 .flatten()
-                .collect::<Vec<_>>()
+                .collect::<Vec<_>>();
+
+            spawn_commands
         },
     )
 }
 
 fn paint_meshes(
     In(layer_index): In<LayerIndex>,
-    paint_action: Single<&ActionState<PaintSkiesAction>>,
+    paint_action: Single<&PaintableHistory<ActionState<PaintSkiesAction>>>,
     paint_skies_canvas: Res<PaintSkiesCanvas>,
-) -> Option<AssetAddAnd<PlatformerShadowMaterial, PaintMeshesEffect<'static, 'static>>> {
-    paint_action.pressed(&PaintSkiesAction::Paint).then(|| {
-        let material = PlatformerShadowMaterial::from(paint_skies_canvas.0.clone());
-        asset_add_and(material, move |material_handle| {
-            paint_meshes_with_material(layer_index, material_handle)
-        })
-    })
+) -> Result<
+    Option<AssetAddAnd<PlatformerShadowMaterial, PaintMeshesEffect<'static, 'static>>>,
+    String,
+> {
+    Ok(paint_action
+        .get(layer_index)
+        .ok_or(
+            "paintable history action state should exist for this run of paint_meshes".to_string(),
+        )?
+        .pressed(&PaintSkiesAction::Paint)
+        .then(|| {
+            let material = PlatformerShadowMaterial::from(paint_skies_canvas.0.clone());
+            asset_add_and(material, move |material_handle| {
+                paint_meshes_with_material(layer_index, material_handle)
+            })
+        }))
 }
