@@ -30,6 +30,8 @@ mod args;
 
 mod cursor;
 
+mod delay_message;
+
 #[cfg(feature = "dev")]
 mod toggle_free_camera;
 
