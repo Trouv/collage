@@ -1,10 +1,41 @@
-use bevy::diagnostic::FrameCount;
+use std::marker::PhantomData;
+
+use bevy::diagnostic::{FrameCount, update_frame_count};
 use bevy::ecs::message::Message;
 use bevy::prelude::*;
 use bevy_pipe_affect::prelude::*;
 
-#[derive(Copy, Clone, PartialEq, Eq, Default, Debug, Message)]
-struct DelayedMessage<M: Message>(M);
+pub struct DelayMessagePlugin<M: Message> {
+    pub delay_frames: u32,
+    phantom: PhantomData<M>,
+}
+
+impl<M: Message> DelayMessagePlugin<M> {
+    pub fn new(delay_frames: u32) -> Self {
+        DelayMessagePlugin {
+            delay_frames,
+            phantom: PhantomData,
+        }
+    }
+}
+
+impl<M: Message + Clone> Plugin for DelayMessagePlugin<M> {
+    fn build(&self, app: &mut App) {
+        app.add_message::<DelayedMessage<M>>()
+            .insert_resource(OldMessageQueue::<M>(vec![]))
+            .add_systems(
+                Last,
+                record_messages::<M>.pipe(affect).before(update_frame_count),
+            )
+            .add_systems(
+                First,
+                write_delayed_message_system::<M>(self.delay_frames).pipe(affect),
+            );
+    }
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, Default, Debug, Message, Deref, DerefMut)]
+pub struct DelayedMessage<M: Message>(pub M);
 
 #[derive(Clone, PartialEq, Eq, Default, Debug, Resource, Deref, DerefMut)]
 struct OldMessageQueue<M: Message>(Vec<(u32, M)>);
