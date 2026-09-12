@@ -5,6 +5,11 @@ use bevy::ecs::message::Message;
 use bevy::prelude::*;
 use bevy_pipe_affect::prelude::*;
 
+/// Generic plugin that replicates messages after a certain delay.
+///
+/// Writes a [`DelayedMessage<M, N>`] message `N` frames after `M` was written.
+///
+/// [`DelayedMessage<M, N>`]: [DelayedMessage]
 #[derive(Copy, Clone, PartialEq, Eq, Default, Debug)]
 pub struct DelayMessagePlugin<M: Message, const DELAY_FRAMES: u32> {
     phantom: PhantomData<M>,
@@ -27,6 +32,7 @@ impl<M: Message + Clone, const DELAY_FRAMES: u32> Plugin for DelayMessagePlugin<
     }
 }
 
+/// The delayed message sent by this plugin.
 #[derive(Copy, Clone, PartialEq, Eq, Default, Debug, Message, Deref, DerefMut)]
 pub struct DelayedMessage<M: Message, const DELAY_FRAMES: u32>(pub M);
 
