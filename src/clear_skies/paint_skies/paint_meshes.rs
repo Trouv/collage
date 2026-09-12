@@ -54,7 +54,7 @@ impl Plugin for PaintMeshesPlugin {
                 PaintLayerHistoryPlugin::<GlobalTransform>::default(),
                 PaintLayerHistoryPlugin::<ActionState<PaintSkiesAction>>::default(),
             ))
-            .add_plugins(DelayMessagePlugin::<RecordPresent>::new(1))
+            .add_plugins(DelayMessagePlugin::<RecordPresent, 1>::default())
             .add_systems(
                 OnEnter(ClearSkiesState::Setup),
                 (
@@ -81,7 +81,7 @@ impl Plugin for PaintMeshesPlugin {
                     track_transform_for_paintable_meshes.pipe(affect),
                     last_layer_index.pipe(paint_meshes).pipe(affect).run_if(
                         in_state(ClearSkiesState::PaintSkies)
-                            .and_then(on_message::<DelayedMessage<RecordPresent>>),
+                            .and_then(on_message::<DelayedMessage<RecordPresent, 1>>),
                     ),
                     (truncate_paint_layers_meshes
                         .pipe(affect)
