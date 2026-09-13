@@ -7,6 +7,7 @@ use bevy::render::storage::ShaderBuffer;
 use bevy::shader::ShaderRef;
 use bevy_pipe_affect::prelude::*;
 
+/// Plugin that adds [`PlatformerShadowMaterial`] and requisite systems.
 #[derive(Copy, Clone, PartialEq, Eq, Default, Debug)]
 pub struct PlatformerShadowPlugin;
 
@@ -25,6 +26,7 @@ impl Plugin for PlatformerShadowPlugin {
 const PLATFORMER_SHADOW_CASTER_INFO_BUFFER_HANDLE: Handle<ShaderBuffer> =
     Handle::Uuid(uuid!("c0c74b8a-dd5a-44a8-b5cc-1b9c506d66cd"), PhantomData);
 
+/// Material that should be placed on entities that platformer shadows can be cast onto.
 #[derive(Clone, PartialEq, Debug, AsBindGroup, Asset, TypePath)]
 pub struct PlatformerShadowMaterial {
     #[storage(0, read_only)]
@@ -52,7 +54,7 @@ impl Material for PlatformerShadowMaterial {
 }
 
 #[derive(Copy, Clone, PartialEq, Debug, ShaderType)]
-pub struct PlatformerShadowCasterInfo {
+struct PlatformerShadowCasterInfo {
     radius: f32,
     translation_xz: Vec2,
 }
@@ -66,8 +68,10 @@ impl Default for PlatformerShadowCasterInfo {
     }
 }
 
+/// Component for entity that should cast platformer shadows.
 #[derive(Copy, Clone, PartialEq, Default, Debug, Component)]
 pub struct PlatformerShadowCaster {
+    /// Radius of the shadow.
     pub radius: f32,
 }
 
