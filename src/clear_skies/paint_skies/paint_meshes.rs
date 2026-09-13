@@ -460,7 +460,7 @@ fn paint_meshes_with_material(
 
             let material_handle = material_handle.clone();
 
-            let spawn_commands = paintable_meshes
+            paintable_meshes
                 .iter()
                 .flat_map(
                     |(paintable_mesh_entity, mesh, mesh_transform, mesh_transform_history)| {
@@ -530,9 +530,7 @@ fn paint_meshes_with_material(
                     },
                 )
                 .flatten()
-                .collect::<Vec<_>>();
-
-            spawn_commands
+                .collect::<Vec<_>>()
         },
     )
 }
