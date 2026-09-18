@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy_asset_loader::prelude::*;
 use bevy_pipe_affect::prelude::*;
 
-use crate::clear_skies::camera::ClearSkiesCameraPlugin;
+use crate::clear_skies::camera::{ClearSkiesCameraPlugin, CreateClearSkiesRenderTarget};
 use crate::clear_skies::paint_skies::PaintSkiesPlugin;
 use crate::clear_skies::platformer_shadow::PlatformerShadowPlugin;
 use crate::clear_skies::play_skies::PlaySkiesPlugin;
@@ -10,6 +10,7 @@ use crate::clear_skies::state::ClearSkiesState;
 use crate::clear_skies::transition::{
     ClearSkiesAssetCollection,
     proceed_to_paint_skies,
+    spawn_atmosphere,
     spawn_scene,
 };
 
@@ -31,7 +32,15 @@ impl Plugin for ClearSkiesPlugin {
                 .continue_to_state(ClearSkiesState::Setup)
                 .load_collection::<ClearSkiesAssetCollection>(),
         )
-        .add_systems(OnEnter(ClearSkiesState::Setup), spawn_scene.pipe(affect))
+        .add_systems(
+            OnEnter(ClearSkiesState::Setup),
+            (
+                spawn_scene.pipe(affect),
+                spawn_atmosphere
+                    .pipe(affect)
+                    .after(CreateClearSkiesRenderTarget),
+            ),
+        )
         .add_systems(
             Update,
             proceed_to_paint_skies

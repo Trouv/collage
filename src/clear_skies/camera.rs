@@ -3,6 +3,7 @@ use std::f32::consts::PI;
 use bevy::asset::RenderAssetUsages;
 use bevy::camera::RenderTarget;
 use bevy::camera::visibility::RenderLayers;
+use bevy::pbr::AtmosphereSettings;
 use bevy::prelude::*;
 use bevy::render::render_resource::{TextureFormat, TextureUsages};
 use bevy_pipe_affect::prelude::{command_insert_resource, *};
@@ -113,14 +114,17 @@ pub enum PaintSkiesAction {
 /// Defines the paint skies camera.
 pub fn spawn_paint_skies_camera(
     render_target: Res<ClearSkiesRenderTarget>,
-) -> CommandSpawn<(
-    InputMap<PaintSkiesAction>,
-    PaintSkiesCamera,
-    SphericalCoordsBounds,
-    Camera,
-    RenderTarget,
-    Transform,
-)> {
+) -> CommandSpawnAnd<
+    (
+        InputMap<PaintSkiesAction>,
+        PaintSkiesCamera,
+        SphericalCoordsBounds,
+        Camera,
+        //RenderTarget,
+        Transform,
+    ),
+    CommandSpawn<impl Bundle + use<>>,
+> {
     let input_map = InputMap::default()
         .with(PaintSkiesAction::Paint, GamepadButton::RightTrigger)
         .with(PaintSkiesAction::Paint, KeyCode::Space)
@@ -137,21 +141,38 @@ pub fn spawn_paint_skies_camera(
             MouseMove::default().sensitivity(0.15).inverted_y(),
         );
 
-    command_spawn((
-        input_map,
-        PaintSkiesCamera,
-        SphericalCoordsBounds {
-            max_phi: 3.0 * PI / 8.0,
-            min_phi: -3.0 * PI / 8.0,
+    let render_target = (**render_target).clone();
+
+    command_spawn_and(
+        (
+            input_map,
+            PaintSkiesCamera,
+            SphericalCoordsBounds {
+                max_phi: 3.0 * PI / 8.0,
+                min_phi: -3.0 * PI / 8.0,
+            },
+            Camera {
+                order: 2,
+                clear_color: ClearColorConfig::None,
+                ..default()
+            },
+            RenderTarget::from(render_target.clone()),
+            Transform::from_xyz(0., 2., 0.),
+        ),
+        move |paint_skies_camera| {
+            command_spawn((
+                ChildOf(paint_skies_camera),
+                AtmosphereCamera,
+                RenderTarget::from(render_target),
+                Camera {
+                    order: 0,
+                    clear_color: ClearColorConfig::Custom(Color::BLACK),
+                    ..default()
+                },
+                Transform::from_xyz(0., 2., 0.),
+            ))
         },
-        Camera {
-            order: 2,
-            clear_color: ClearColorConfig::None,
-            ..default()
-        },
-        RenderTarget::from((**render_target).clone()),
-        Transform::from_xyz(0., 2., 0.),
-    ))
+    )
 }
 
 /// The camera controlled in the paint skies state whose subjects get painted.
@@ -159,6 +180,11 @@ pub fn spawn_paint_skies_camera(
 #[reflect(Component)]
 #[require(Name = "PaintSkiesCamera", Camera3d, LookAtSphericalCoords, Paintable, PaintableHistory<GlobalTransform>, PaintableHistory<ActionState<PaintSkiesAction>>, RenderLayers = PAINTABLE_LAYER.with(0))]
 pub struct PaintSkiesCamera;
+
+#[derive(Debug, Default, Copy, Clone, PartialEq, Eq, Hash, Reflect, Component)]
+#[reflect(Component)]
+#[require(Name = "AtmosphereCamera", Camera3d, RenderLayers = PAINTABLE_LAYER.with(0), AtmosphereSettings)]
+pub struct AtmosphereCamera;
 
 /// Marker component for the viewport UI node displaying the [`ClearSkiesRenderTarget`].
 #[derive(Default, Debug, PartialEq, Eq, Copy, Clone, Hash, Reflect, Component)]

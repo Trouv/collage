@@ -1,5 +1,7 @@
 use bevy::camera::RenderTarget;
 use bevy::camera::visibility::RenderLayers;
+use bevy::color::palettes::css::BLACK;
+use bevy::pbr::AtmosphereSettings;
 use bevy::prelude::*;
 use bevy_pipe_affect::prelude::*;
 
@@ -18,7 +20,7 @@ pub fn spawn_camera(
         PlaySkiesCamera,
         Camera {
             order: 1,
-            clear_color: ClearColorConfig::Custom(Color::srgb(0.0, 0.4, 1.0)),
+            clear_color: ClearColorConfig::None,
             ..default()
         },
         Projection::Orthographic(OrthographicProjection::default_3d()),

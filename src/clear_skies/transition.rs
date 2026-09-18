@@ -1,9 +1,13 @@
+use bevy::camera::visibility::RenderLayers;
+use bevy::light::Atmosphere;
+use bevy::light::atmosphere::ScatteringMedium;
 use bevy::prelude::*;
 use bevy_asset_loader::asset_collection::AssetCollection;
 use bevy_pipe_affect::prelude::*;
 use thiserror::Error;
 
 use crate::clear_skies::ClearSkiesState;
+use crate::clear_skies::render_layers::{PAINTABLE_LAYER, PAINTED_LAYER};
 
 /// GLTF assets handles should be strong paths.
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, Error)]
@@ -21,6 +25,12 @@ pub fn spawn_scene(
         GltfAssetLabel::Scene(0).from_asset(assets.cube.path().ok_or(GltfAssetNotStrongPath)?),
         |handle| command_spawn(WorldAssetRoot(handle.clone())),
     ))
+}
+
+pub fn spawn_atmosphere() -> AssetAddAnd<ScatteringMedium, CommandSpawn<Atmosphere>> {
+    asset_add_and(ScatteringMedium::earth(256, 256), |earth_medium| {
+        command_spawn(Atmosphere::earth(earth_medium))
+    })
 }
 
 /// Asset collection for the clear skies scenes.
