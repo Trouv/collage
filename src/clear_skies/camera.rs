@@ -120,7 +120,7 @@ pub fn spawn_paint_skies_camera(
         PaintSkiesCamera,
         SphericalCoordsBounds,
         Camera,
-        //RenderTarget,
+        RenderTarget,
         Transform,
     ),
     CommandSpawn<impl Bundle + use<>>,
