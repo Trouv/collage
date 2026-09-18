@@ -1,7 +1,5 @@
 use bevy::camera::RenderTarget;
 use bevy::camera::visibility::RenderLayers;
-use bevy::color::palettes::css::BLACK;
-use bevy::pbr::AtmosphereSettings;
 use bevy::prelude::*;
 use bevy_pipe_affect::prelude::*;
 

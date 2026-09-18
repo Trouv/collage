@@ -1,4 +1,3 @@
-use bevy::camera::visibility::RenderLayers;
 use bevy::light::Atmosphere;
 use bevy::light::atmosphere::ScatteringMedium;
 use bevy::prelude::*;
@@ -7,7 +6,6 @@ use bevy_pipe_affect::prelude::*;
 use thiserror::Error;
 
 use crate::clear_skies::ClearSkiesState;
-use crate::clear_skies::render_layers::{PAINTABLE_LAYER, PAINTED_LAYER};
 
 /// GLTF assets handles should be strong paths.
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, Error)]
