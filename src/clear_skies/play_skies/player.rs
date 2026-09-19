@@ -2,8 +2,10 @@ use avian3d::PhysicsPlugins;
 use avian3d::collision::collider::Collider;
 use avian3d::dynamics::integrator::Gravity;
 use avian3d::dynamics::rigid_body::{LinearVelocity, LockedAxes, RigidBody};
-use avian3d::spatial_query::RayCaster;
+use avian3d::math::PI;
+use avian3d::spatial_query::{RayCaster, RayHits};
 use bevy::camera::visibility::RenderLayers;
+use bevy::math::ops::sqrt;
 use bevy::prelude::*;
 use bevy_pipe_affect::prelude::*;
 use leafwing_input_manager::prelude::*;
@@ -43,15 +45,18 @@ impl Plugin for ClearSkiesPlayerPlugin {
     }
 }
 
+const PLAYER_HEIGHT: f32 = 20.0;
+const PLAYER_RADIUS: f32 = 5.0;
+
 #[derive(Copy, Clone, PartialEq, Eq, Default, Debug, Component)]
 #[require(
     Name = "ClearSkiesPlayer",
     ClearSkiesPlayerSettings,
-    Collider::capsule(5f32, 10f32),
+    Collider::capsule(PLAYER_RADIUS, PLAYER_HEIGHT - (2.0 * PLAYER_RADIUS)),
     LockedAxes::ROTATION_LOCKED,
     RigidBody::Dynamic,
     RenderLayers = PAINTED_LAYER,
-    PlatformerShadowCaster = PlatformerShadowCaster { radius: 5.0 },
+    PlatformerShadowCaster = PlatformerShadowCaster { radius: PLAYER_RADIUS },
     RayCaster = RayCaster::new(default(), Dir3::NEG_Y),
 )]
 struct ClearSkiesPlayer;
@@ -125,9 +130,10 @@ fn move_player(
         &LinearVelocity,
         &ClearSkiesPlayerSettings,
         &ActionState<ClearSkiesPlayerAction>,
+        &RayHits,
     )>,
 ) -> QueryEntityAffect<ComponentSet<LinearVelocity>> {
-    let (player_entity, current_velocity, player_settings, input) = *player;
+    let (player_entity, current_velocity, player_settings, input, ground_ray_cast) = *player;
 
     let input_xz = input
         .dual_axis_data(&ClearSkiesPlayerAction::Move)
@@ -139,12 +145,41 @@ fn move_player(
     let direction = (input_xz.x * camera.right().xz().normalize())
         + (input_xz.y * camera.forward().xz().normalize());
 
-    let velocity_with_movement = current_velocity.with_xz(direction * player_settings.speed);
+    let direction_3d = Vec3::new(direction.x, 0.0, direction.y);
 
-    let velocity = if input_jump {
-        velocity_with_movement.with_y(player_settings.jump)
+    let on_ground = ground_ray_cast
+        .iter_sorted()
+        .next()
+        // we're on the ground if there's ground below us with some ~45 degree leeway
+        .map(|ray_hit| ray_hit.distance <= (PLAYER_HEIGHT / 2.0) + ((sqrt(2.0) / 2.0) * PI))
+        .unwrap_or_default();
+
+    let ground_tilt = if on_ground {
+        ground_ray_cast
+            .iter_sorted()
+            .next()
+            .map(|ray_hit| ray_hit.normal)
+            .unwrap_or(Vec3::Y)
     } else {
-        velocity_with_movement
+        Vec3::Y
+    };
+
+    let direction_on_ground_tilt_plane = ground_tilt.cross(direction_3d).cross(ground_tilt);
+
+    let tilted_direction = if direction_3d == Vec3::ZERO {
+        Vec3::ZERO
+    } else {
+        direction_3d.project_onto(direction_on_ground_tilt_plane)
+    };
+
+    let velocity_with_movement = tilted_direction * player_settings.speed;
+
+    let velocity = if input_jump && on_ground {
+        velocity_with_movement.with_y(player_settings.jump)
+    } else if on_ground {
+        velocity_with_movement.with_y(velocity_with_movement.y)
+    } else {
+        velocity_with_movement.with_y(current_velocity.y)
     };
     query_entity_affect(player_entity, component_set(LinearVelocity(velocity)))
 }
