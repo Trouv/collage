@@ -25,7 +25,7 @@ impl Plugin for ClearSkiesPlayerPlugin {
             SwitchGamepadsPlugin::<ClearSkiesPlayerAction>::default(),
             PhysicsPlugins::default(),
         ))
-        .insert_resource(Gravity(Vec3::NEG_Y * 100.0))
+        .insert_resource(Gravity(Vec3::NEG_Y * 200.0))
         .add_systems(
             OnEnter(ClearSkiesState::PlaySkies),
             spawn_player.pipe(affect),
@@ -71,7 +71,7 @@ impl Default for ClearSkiesPlayerSettings {
     fn default() -> Self {
         ClearSkiesPlayerSettings {
             speed: 80.0,
-            jump: 80.0,
+            jump: 120.0,
         }
     }
 }
