@@ -2,6 +2,7 @@ use avian3d::PhysicsPlugins;
 use avian3d::collision::collider::Collider;
 use avian3d::dynamics::integrator::Gravity;
 use avian3d::dynamics::rigid_body::{LinearVelocity, LockedAxes, RigidBody};
+use avian3d::spatial_query::RayCaster;
 use bevy::camera::visibility::RenderLayers;
 use bevy::prelude::*;
 use bevy_pipe_affect::prelude::*;
@@ -50,7 +51,8 @@ impl Plugin for ClearSkiesPlayerPlugin {
     LockedAxes::ROTATION_LOCKED,
     RigidBody::Dynamic,
     RenderLayers = PAINTED_LAYER,
-    PlatformerShadowCaster = PlatformerShadowCaster { radius: 5.0 }
+    PlatformerShadowCaster = PlatformerShadowCaster { radius: 5.0 },
+    RayCaster = RayCaster::new(default(), Dir3::NEG_Y),
 )]
 struct ClearSkiesPlayer;
 
