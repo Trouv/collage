@@ -56,14 +56,14 @@ impl Material for PlatformerShadowMaterial {
 #[derive(Copy, Clone, PartialEq, Debug, ShaderType)]
 struct PlatformerShadowCasterInfo {
     radius: f32,
-    translation_xz: Vec2,
+    translation: Vec3,
 }
 
 impl Default for PlatformerShadowCasterInfo {
     fn default() -> Self {
         PlatformerShadowCasterInfo {
             radius: 0.1,
-            translation_xz: Vec2::default(),
+            translation: Vec3::default(),
         }
     }
 }
@@ -83,11 +83,11 @@ fn write_caster_info(
         .next()
         .map(|(transform, caster)| {
             let radius = caster.radius;
-            let translation_xz = transform.translation().xz();
+            let translation = transform.translation();
 
             PlatformerShadowCasterInfo {
                 radius,
-                translation_xz,
+                translation,
             }
         })
         .unwrap_or_default();
