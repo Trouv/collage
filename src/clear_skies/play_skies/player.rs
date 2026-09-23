@@ -16,6 +16,7 @@ use crate::clear_skies::play_skies::PlaySkiesCamera;
 use crate::clear_skies::render_layers::PAINTED_LAYER;
 use crate::clear_skies::switch_gamepads::SwitchGamepadsPlugin;
 
+/// Plugin that provides the functionality for the player that platforms on paint meshes.
 #[derive(Copy, Clone, PartialEq, Eq, Default, Debug)]
 pub struct ClearSkiesPlayerPlugin;
 
