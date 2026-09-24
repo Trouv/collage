@@ -77,12 +77,16 @@ impl Default for ClearSkiesPlayerSettings {
     }
 }
 
+/// Actions that the player can perform while platforming on painted meshes.
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Hash, Reflect, Actionlike)]
 pub enum ClearSkiesPlayerAction {
+    /// Basic dual-axis movement.
     #[actionlike(DualAxis)]
     Move,
+    /// Jump action.
     #[actionlike(Button)]
     Jump,
+    /// Return to the non-play-state (paint).
     #[actionlike(Button)]
     Transition,
 }
