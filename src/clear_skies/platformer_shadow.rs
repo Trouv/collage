@@ -1,5 +1,7 @@
+use std::f32::INFINITY;
 use std::marker::PhantomData;
 
+use avian3d::spatial_query::RayHits;
 use bevy::asset::uuid::uuid;
 use bevy::prelude::*;
 use bevy::render::render_resource::{AsBindGroup, ShaderType};
@@ -57,6 +59,7 @@ impl Material for PlatformerShadowMaterial {
 struct PlatformerShadowCasterInfo {
     radius: f32,
     translation: Vec3,
+    ground_distance: f32,
 }
 
 impl Default for PlatformerShadowCasterInfo {
@@ -64,6 +67,7 @@ impl Default for PlatformerShadowCasterInfo {
         PlatformerShadowCasterInfo {
             radius: 0.1,
             translation: Vec3::default(),
+            ground_distance: 0.0,
         }
     }
 }
@@ -76,18 +80,24 @@ pub struct PlatformerShadowCaster {
 }
 
 fn write_caster_info(
-    casters: Query<(&GlobalTransform, &PlatformerShadowCaster)>,
+    casters: Query<(&GlobalTransform, &PlatformerShadowCaster, &RayHits)>,
 ) -> AssetInsert<ShaderBuffer> {
     let caster_info = casters
         .into_iter()
         .next()
-        .map(|(transform, caster)| {
+        .map(|(transform, caster, ray_hits)| {
             let radius = caster.radius;
             let translation = transform.translation();
+            let ground_distance = ray_hits
+                .iter_sorted()
+                .next()
+                .map(|ray_hit| ray_hit.distance)
+                .unwrap_or(INFINITY);
 
             PlatformerShadowCasterInfo {
                 radius,
                 translation,
+                ground_distance,
             }
         })
         .unwrap_or_default();
