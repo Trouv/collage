@@ -17,33 +17,28 @@ use crate::clear_skies::render_layers::PAINTED_LAYER;
 use crate::clear_skies::switch_gamepads::SwitchGamepadsPlugin;
 
 /// Plugin that provides the functionality for the player that platforms on paint meshes.
-#[derive(Copy, Clone, PartialEq, Eq, Default, Debug)]
-pub struct ClearSkiesPlayerPlugin;
-
-impl Plugin for ClearSkiesPlayerPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_plugins((
-            SwitchGamepadsPlugin::<ClearSkiesPlayerAction>::default(),
-            PhysicsPlugins::default(),
-        ))
-        .insert_resource(Gravity(Vec3::NEG_Y * 200.0))
-        .add_systems(
-            OnEnter(ClearSkiesState::PlaySkies),
-            spawn_player.pipe(affect),
+pub fn clear_skies_player_plugin(app: &mut App) {
+    app.add_plugins((
+        SwitchGamepadsPlugin::<ClearSkiesPlayerAction>::default(),
+        PhysicsPlugins::default(),
+    ))
+    .insert_resource(Gravity(Vec3::NEG_Y * 200.0))
+    .add_systems(
+        OnEnter(ClearSkiesState::PlaySkies),
+        spawn_player.pipe(affect),
+    )
+    .add_systems(
+        Update,
+        (
+            transition_to_paint_skies.pipe(affect),
+            move_player.pipe(affect),
         )
-        .add_systems(
-            Update,
-            (
-                transition_to_paint_skies.pipe(affect),
-                move_player.pipe(affect),
-            )
-                .run_if(in_state(ClearSkiesState::PlaySkies)),
-        )
-        .add_systems(
-            OnExit(ClearSkiesState::PlaySkies),
-            despawn_player.pipe(affect),
-        );
-    }
+            .run_if(in_state(ClearSkiesState::PlaySkies)),
+    )
+    .add_systems(
+        OnExit(ClearSkiesState::PlaySkies),
+        despawn_player.pipe(affect),
+    );
 }
 
 const PLAYER_HEIGHT: f32 = 20.0;
