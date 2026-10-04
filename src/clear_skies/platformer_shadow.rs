@@ -60,6 +60,7 @@ struct PlatformerShadowCasterInfo {
     radius: f32,
     translation: Vec3,
     ground_distance: f32,
+    normal: Vec3,
 }
 
 impl Default for PlatformerShadowCasterInfo {
@@ -68,6 +69,7 @@ impl Default for PlatformerShadowCasterInfo {
             radius: 0.1,
             translation: Vec3::default(),
             ground_distance: 0.0,
+            normal: Vec3::Y,
         }
     }
 }
@@ -88,16 +90,17 @@ fn write_caster_info(
         .map(|(transform, caster, ray_hits)| {
             let radius = caster.radius;
             let translation = transform.translation();
-            let ground_distance = ray_hits
+            let (ground_distance, normal) = ray_hits
                 .iter_sorted()
                 .next()
-                .map(|ray_hit| ray_hit.distance)
-                .unwrap_or(INFINITY);
+                .map(|ray_hit| (ray_hit.distance, ray_hit.normal))
+                .unwrap_or((INFINITY, Vec3::Y));
 
             PlatformerShadowCasterInfo {
                 radius,
                 translation,
                 ground_distance,
+                normal,
             }
         })
         .unwrap_or_default();

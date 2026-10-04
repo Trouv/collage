@@ -4,6 +4,7 @@ struct PlatformerShadowCasterInfo {
     radius: f32,
     translation: vec3<f32>,
     ground_distance: f32,
+    normal: vec3<f32>,
 }
 
 @group(#{MATERIAL_BIND_GROUP}) @binding(0) var<storage, read> caster: PlatformerShadowCasterInfo;
@@ -18,8 +19,13 @@ fn one_if_beneath_caster(position: vec4<f32>, caster: PlatformerShadowCasterInfo
     return max(0, sign(caster.translation.y - position.y));
 }
 
+fn shadow_pillar_height(caster: PlatformerShadowCasterInfo) -> f32 {
+    let height_of_radius_on_surface = (caster.radius * length(caster.normal.xz)) / caster.normal.y;
+    return caster.ground_distance + (2 * height_of_radius_on_surface);
+}
+
 fn one_if_near_enough_to_caster(position: vec4<f32>, caster: PlatformerShadowCasterInfo) -> f32 {
-    let shadow_above = caster.translation.y - caster.ground_distance - 10.0;
+    let shadow_above = caster.translation.y - shadow_pillar_height(caster);
     return max(0, sign(position.y - shadow_above));
 }
 
