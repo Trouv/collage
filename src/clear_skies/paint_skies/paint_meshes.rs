@@ -14,11 +14,11 @@ use crate::button_predicate::add_button_timer;
 use crate::clear_skies::ClearSkiesState;
 use crate::clear_skies::camera::{ClearSkiesRenderTarget, ClearSkiesResolution, PaintSkiesAction};
 use crate::clear_skies::paint_skies::paint_layer_history::{
-    PaintLayerHistoryPlugin,
     PaintableHistory,
     RecordPresent,
     TruncatePaintLayers,
     last_layer_index,
+    paint_layer_history_plugin,
     triggerable_last_layer_index,
 };
 use crate::clear_skies::paint_skies::triangle_with_uvs::{OctahedronWithUvs, TriangleWithUvs};
@@ -51,8 +51,8 @@ impl Plugin for PaintMeshesPlugin {
 
         app.init_resource::<PaintLayerSettings>()
             .add_plugins((
-                PaintLayerHistoryPlugin::<GlobalTransform>::default(),
-                PaintLayerHistoryPlugin::<ActionState<PaintSkiesAction>>::default(),
+                paint_layer_history_plugin::<GlobalTransform>,
+                paint_layer_history_plugin::<ActionState<PaintSkiesAction>>,
             ))
             .add_plugins(DelayMessagePlugin::<RecordPresent, 1>::default())
             .add_systems(

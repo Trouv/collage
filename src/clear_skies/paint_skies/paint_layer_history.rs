@@ -42,24 +42,19 @@ where
 }
 
 /// Plugin that tracks the history of a component at previous paint layers.
-#[derive(Copy, Clone, PartialEq, Eq, Debug, Default)]
-pub struct PaintLayerHistoryPlugin<C>(PhantomData<C>);
-
-impl<C> Plugin for PaintLayerHistoryPlugin<C>
+pub fn paint_layer_history_plugin<C>(app: &mut App)
 where
     C: Component + Typed + GetTypeRegistration + FromReflect + Clone + Send + Sync + 'static,
 {
-    fn build(&self, app: &mut App) {
-        if !app.is_plugin_added::<PaintLayerHistoryPluginNoUnit<HistoryUnit>>() {
-            app.add_systems(
-                OnEnter(ClearSkiesState::Setup),
-                (|| command_spawn(HistoryUnit)).pipe(affect),
-            )
-            .add_plugins(PaintLayerHistoryPluginNoUnit::<HistoryUnit>::default());
-        }
-
-        app.add_plugins(PaintLayerHistoryPluginNoUnit(self.0));
+    if !app.is_plugin_added::<PaintLayerHistoryPluginNoUnit<HistoryUnit>>() {
+        app.add_systems(
+            OnEnter(ClearSkiesState::Setup),
+            (|| command_spawn(HistoryUnit)).pipe(affect),
+        )
+        .add_plugins(PaintLayerHistoryPluginNoUnit::<HistoryUnit>::default());
     }
+
+    app.add_plugins(PaintLayerHistoryPluginNoUnit(PhantomData::<C>));
 }
 
 /// `Component` that stores the history of another component by layer index.
