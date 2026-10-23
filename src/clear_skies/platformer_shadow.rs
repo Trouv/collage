@@ -8,6 +8,7 @@ use bevy::render::render_resource::{AsBindGroup, ShaderType};
 use bevy::render::storage::ShaderBuffer;
 use bevy::shader::ShaderRef;
 use bevy_pipe_affect::prelude::*;
+use bytemuck::NoUninit;
 
 /// Plugin that adds [`PlatformerShadowMaterial`] and requisite systems.
 #[derive(Copy, Clone, PartialEq, Eq, Default, Debug)]
@@ -32,7 +33,7 @@ const PLATFORMER_SHADOW_CASTER_INFO_BUFFER_HANDLE: Handle<ShaderBuffer> =
 #[derive(Clone, PartialEq, Debug, AsBindGroup, Asset, TypePath)]
 pub struct PlatformerShadowMaterial {
     #[storage(0, read_only)]
-    casters: Handle<ShaderBuffer>,
+    caster: Handle<ShaderBuffer>,
     #[texture(1)]
     #[sampler(2)]
     color_texture: Handle<Image>,
@@ -41,13 +42,13 @@ pub struct PlatformerShadowMaterial {
 impl From<Handle<Image>> for PlatformerShadowMaterial {
     fn from(color_texture: Handle<Image>) -> Self {
         PlatformerShadowMaterial {
-            casters: PLATFORMER_SHADOW_CASTER_INFO_BUFFER_HANDLE,
+            caster: PLATFORMER_SHADOW_CASTER_INFO_BUFFER_HANDLE,
             color_texture,
         }
     }
 }
 
-const PLATFORMER_SHADOW_SHADER_PATH: &str = "shaders/platformer_shadow.wgsl";
+const PLATFORMER_SHADOW_SHADER_PATH: &str = "shaders/platformer_shadow.wesl";
 
 impl Material for PlatformerShadowMaterial {
     fn fragment_shader() -> ShaderRef {
@@ -55,21 +56,22 @@ impl Material for PlatformerShadowMaterial {
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Debug, ShaderType)]
+#[derive(Copy, Clone, PartialEq, Debug, ShaderType, NoUninit)]
+#[repr(C)]
 struct PlatformerShadowCasterInfo {
-    radius: f32,
     translation: Vec3,
-    ground_distance: f32,
+    radius: f32,
     normal: Vec3,
+    ground_distance: f32,
 }
 
 impl Default for PlatformerShadowCasterInfo {
     fn default() -> Self {
         PlatformerShadowCasterInfo {
-            radius: 0.1,
             translation: Vec3::default(),
-            ground_distance: 0.0,
+            radius: 0.1,
             normal: Vec3::Y,
+            ground_distance: 0.0,
         }
     }
 }
@@ -97,19 +99,15 @@ fn write_caster_info(
                 .unwrap_or((INFINITY, Vec3::Y));
 
             PlatformerShadowCasterInfo {
-                radius,
                 translation,
-                ground_distance,
+                radius,
                 normal,
+                ground_distance,
             }
         })
         .unwrap_or_default();
 
-    let shader_buffer = {
-        let mut buffer = ShaderBuffer::default();
-        buffer.set_data(caster_info);
-        buffer
-    };
+    let shader_buffer = ShaderBuffer::from(vec![caster_info]);
 
     asset_insert(&PLATFORMER_SHADOW_CASTER_INFO_BUFFER_HANDLE, shader_buffer)
 }

@@ -1,8 +1,9 @@
+use std::f32::consts::PI;
+
 use avian3d::PhysicsPlugins;
 use avian3d::collision::collider::Collider;
 use avian3d::dynamics::integrator::Gravity;
 use avian3d::dynamics::rigid_body::{LinearVelocity, LockedAxes, RigidBody};
-use avian3d::math::PI;
 use avian3d::spatial_query::{RayCaster, RayHits};
 use bevy::camera::visibility::RenderLayers;
 use bevy::math::ops::sqrt;
