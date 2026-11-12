@@ -1,0 +1,53 @@
+import bevy_pbr::render::forward_io::VertexOutput;
+
+struct PlatformerShadowCasterInfo {
+    translation: vec3<f32>,
+    radius: f32,
+    normal: vec3<f32>,
+    ground_distance: f32,
+}
+
+@group(constants::MATERIAL_BIND_GROUP) @binding(0) var<storage, read> caster: array<PlatformerShadowCasterInfo, 1>;
+@group(constants::MATERIAL_BIND_GROUP) @binding(1) var material_color_texture: texture_2d<f32>;
+@group(constants::MATERIAL_BIND_GROUP) @binding(2) var material_color_sampler: sampler;
+
+fn distance_to_caster(position: vec4<f32>, caster: PlatformerShadowCasterInfo) -> f32 {
+    return length(position.xz - caster.translation.xz);
+}
+
+fn one_if_beneath_caster(position: vec4<f32>, caster: PlatformerShadowCasterInfo) -> f32 {
+    return max(0, sign(caster.translation.y - position.y));
+}
+
+fn shadow_pillar_height(caster: PlatformerShadowCasterInfo) -> f32 {
+    let height_of_radius_on_surface = (caster.radius * length(caster.normal.xz)) / caster.normal.y;
+    return caster.ground_distance + (2 * height_of_radius_on_surface);
+}
+
+fn one_if_near_enough_to_caster(position: vec4<f32>, caster: PlatformerShadowCasterInfo) -> f32 {
+    let shadow_above = caster.translation.y - shadow_pillar_height(caster);
+    return max(0, sign(position.y - shadow_above));
+}
+
+fn shadow_multiplier_for_caster(position: vec4<f32>, caster: PlatformerShadowCasterInfo) -> f32 {
+    let distance = distance_to_caster(position, caster);
+
+    let beneath = one_if_beneath_caster(position, caster);
+
+    let near = one_if_near_enough_to_caster(position, caster);
+
+    let shadow_intensity = (beneath * near * sqrt(max((caster.radius * caster.radius) - (distance * distance), 0.0))) / caster.radius;
+
+    return 1.0 - shadow_intensity;
+}
+
+@fragment
+fn fragment(
+    in: VertexOutput,
+) -> @location(0) vec4f {
+    let base_color = textureSample(material_color_texture, material_color_sampler, in.uv);
+
+    let shadow_mult = shadow_multiplier_for_caster(in.world_position, caster[0]);
+
+    return vec4f((base_color.xyz * shadow_mult), base_color.a);
+}
