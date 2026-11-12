@@ -27,7 +27,7 @@ pub fn spawn_scene(
 #[derive(Debug, Default, Clone, PartialEq, Eq, Resource, AssetCollection)]
 pub struct ClearSkiesAssetCollection {
     /// Basic cube mash.
-    #[asset(path = "models/clear-skies.glb")]
+    #[asset(path = "models/sheridan.glb")]
     pub cube: Handle<Gltf>,
 }
 
