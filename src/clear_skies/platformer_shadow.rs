@@ -1,4 +1,3 @@
-use std::f32::INFINITY;
 use std::marker::PhantomData;
 
 use avian3d::spatial_query::RayHits;
@@ -96,7 +95,7 @@ fn write_caster_info(
                 .iter_sorted()
                 .next()
                 .map(|ray_hit| (ray_hit.distance, ray_hit.normal))
-                .unwrap_or((INFINITY, Vec3::Y));
+                .unwrap_or((f32::INFINITY, Vec3::Y));
 
             PlatformerShadowCasterInfo {
                 translation,
