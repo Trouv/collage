@@ -164,7 +164,7 @@ impl Default for PaintLayerSettings {
         PaintLayerSettings {
             zero_layer_distance: 1000.0,
             layer_distance_collapse_rate: 0.98,
-            max_empty_layers: 10,
+            max_empty_layers: 2,
         }
     }
 }
