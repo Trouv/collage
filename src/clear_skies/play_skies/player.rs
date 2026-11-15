@@ -165,20 +165,14 @@ fn move_player(
         Vec3::Y
     };
 
-    let direction_on_ground_tilt_plane = ground_tilt.cross(direction_3d).cross(ground_tilt);
+    let y_on_ground_tilt_plane_given_xz_from_direction =
+        -(ground_tilt.x * direction_3d.x + ground_tilt.z * direction_3d.z) / ground_tilt.y;
 
-    let tilted_direction =
-        if direction_3d == Vec3::ZERO || direction_on_ground_tilt_plane == Vec3::ZERO {
-            Vec3::ZERO
-        } else {
-            let magnitude = direction_3d.length()
-                / direction_on_ground_tilt_plane
-                    .normalize()
-                    .project_onto(direction_3d)
-                    .length();
-
-            magnitude * direction_on_ground_tilt_plane.normalize()
-        };
+    let tilted_direction = Vec3::new(
+        direction_3d.x,
+        y_on_ground_tilt_plane_given_xz_from_direction,
+        direction_3d.z,
+    );
 
     let velocity_with_movement = tilted_direction * player_settings.speed;
 
